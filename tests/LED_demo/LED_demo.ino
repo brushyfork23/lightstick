@@ -25,8 +25,14 @@ FASTLED_USING_NAMESPACE
 CRGB leds[NUM_STRIPS][NUM_LEDS];
 
 // at 60mA per pixel on white * 220 pixels, 13.2A @ 5VDC.
+// by ammeter, I get:
+// 6A @ 5VDC (White)
+// 3.4A (rainbow)
+// 1A sparse animations
 
-#define BRIGHTNESS          255
+// 4A supply seems about right
+
+#define MASTER_BRIGHTNESS  255
 #define FRAMES_PER_SECOND  120
 
 void setup() {
@@ -39,13 +45,13 @@ void setup() {
   FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds[1], NUM_LEDS);
 
   // set master brightness control
-  FastLED.setBrightness(255);
+  FastLED.setBrightness(MASTER_BRIGHTNESS);
 }
 
 
 // List of patterns to cycle through.  Each is defined as a separate function below.
 typedef void (*SimplePatternList[])();
-SimplePatternList gPatterns = { allWhite, rainbow, rainbowWithGlitter, confetti, sinelon, juggle, bpm };
+SimplePatternList gPatterns = { solid, rainbow, rainbowWithGlitter, confetti, sinelon, juggle, bpm };
 
 uint8_t gCurrentPatternNumber = 0; // Index number of which pattern is current
 uint8_t gHue = 0; // rotating "base color" used by many of the patterns
@@ -73,10 +79,10 @@ void nextPattern()
   gCurrentPatternNumber = (gCurrentPatternNumber + 1) % ARRAY_SIZE( gPatterns);
 }
 
-void allWhite() {
+void solid() {
   // FastLED's built-in solid fill (colorutils.h)
   for(int s = 0; s < NUM_STRIPS; s++) {
-    fill_solid( leds[s], NUM_LEDS, CRGB::White );
+    fill_solid( leds[s], NUM_LEDS, CHSV(gHue, 255, 255) );
   }
 }
 
