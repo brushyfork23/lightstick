@@ -1,37 +1,42 @@
 #include <FastLED.h>
 #include <Metro.h>
+#include <Streaming.h>
 #include "Animations.h"
 
-#define FPS 100
-
-CHSV Blue(HUE_BLUE, 255, 255);
 Metro changeAnimation(10000UL);
-byte currentAnimation = A_SOLID;
+byte anim = A_SOLID;
+byte pos = 0;
+byte hue = 0;
 
 void setup() {
   delay(500); // delay for upload
    
+  Serial.begin(115200);
+  
   // startup animation
-  anim.begin();
-  anim.setAnimation(A_SOLID, Blue, 0, 30);
-//  anim.setAnimation(A_RAINBOW, Blue, 0, FPS);
-//  anim.setAnimation(A_GLITTER, Blue, 0, FPS);
-//  anim.setAnimation(A_CONFETTI, Blue, 0, FPS);
-//  anim.setAnimation(A_CYLON, Blue, 0, FPS);
-//  anim.setAnimation(A_BPM, Blue, 0, FPS);
-//  anim.setAnimation(A_JUGGLE, Blue, 0, FPS);
+  A.begin();
+  
+  // 
+  A.startAnimation(A_SOLID);
+  A.startHue(HUE_BLUE);
+  A.incrementHue(0);
 }
 
 void loop()
 {
   // run it
-  anim.runAnimation();
-  
+  A.runAnimation();
+  /*
   // swap on an interval
   if( changeAnimation.check() ) {
-    currentAnimation++;
-    if( currentAnimation == N_ANIMATIONS ) currentAnimation = 0;
-    anim.setAnimation(currentAnimation, Blue, 0, 30);
+    pos += 10;
+    hue += 10;
+    anim++;
+
+    A.startAnimation(anim);
+    A.startPosition(pos);
+    A.startHue(hue);
   }
+  */
 }
 

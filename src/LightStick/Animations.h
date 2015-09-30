@@ -3,13 +3,14 @@
 
 #include <Arduino.h>
 
+#include <Streaming.h>
+
 #define PIN_DATA1      4
 #define PIN_DATA2      7
 #define PIN_CLK        6
 #define LED_TYPE       APA102
 #define NUM_STRIPS     2
 #define NUM_LEDS       110
-#define MASTER_BRIGHTNESS  255
 
 #include <Metro.h>
 #include <FastLED.h>
@@ -21,9 +22,6 @@
 // 1A sparse animations
 
 // 4A supply seems about right
-
-
-
 
 FASTLED_USING_NAMESPACE
 
@@ -42,18 +40,33 @@ enum animation_t {
 
 class Animation {
   public:
-    // startup
+    // initialize led strips
     void begin();
+    // which calls the following functions with their defaults:
+    // set frames per second
+    void setFPS(uint16_t framesPerSecond=30);
+    // set master brightness
+    void setMasterBrightness(byte masterBrightness=255);
+
+    // animations control
     // sets the animation 
-    void setAnimation(byte animation, CHSV startHSV, uint16_t startPos, unsigned long framesPerSecond); 
+    void startAnimation(byte animation=A_SOLID, boolean clearStrip=true); 
+    // sets the hue start and increment for animation
+    void startHue(byte hue=0);
+    void incrementHue(int inc=1);
+    // sets the led start and increment for animation
+    void startPosition(byte pos=0);
+    void incrementPosition(int inc=1);
+    // set the random seed for animation
+    void startSeed(uint16_t seed = 1337);
+    // set the beat-per-minute
+    
     // runs the animation
     void runAnimation();
     
   private:
-    byte currentAnimation;
-    
-    CHSV currentHSV;
-    uint16_t currentPos;
+    byte anim, hueVal, posVal;   
+    int hueInc, posInc;
     
     Metro pushNextFrame;
     
@@ -66,6 +79,6 @@ class Animation {
     void aJuggle();
 };
 
-extern Animation anim;
+extern Animation A;
 
 #endif
