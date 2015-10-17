@@ -17,9 +17,9 @@ void setup() {
   A.begin();
   
   // 
-  A.startAnimation(A_SOLID);
-  A.startHue(HUE_BLUE);
-  A.incrementHue(0);
+  A.startAnimation(A_FIRE);
+  A.startHue(0);
+  A.incrementHue(1);
 }
 
 void loop()

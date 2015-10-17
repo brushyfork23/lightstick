@@ -34,6 +34,8 @@ enum animation_t {
   A_CYLON,
   A_BPM,
   A_JUGGLE,
+  A_WHITE,// really a test pattern for maximal ampere draw estimation
+  A_FIRE, // simulated fire colors
   
   N_ANIMATIONS
 };
@@ -77,6 +79,8 @@ class Animation {
     void aCylon();
     void aBPM();
     void aJuggle();
+    void aWhite();
+    void aFire();
 };
 
 extern Animation A;
