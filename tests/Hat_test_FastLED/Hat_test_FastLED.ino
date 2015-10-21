@@ -34,6 +34,16 @@ void setup() {
 
   // set master brightness control
   FastLED.setBrightness(BRIGHTNESS);
+
+  fill_solid(leds, NUM_LEDS, CRGB(255,0,0));
+  FastLED.show();
+  delay(2000);
+  fill_solid(leds, NUM_LEDS, CRGB(0,255,0));
+  FastLED.show();
+  delay(2000);
+  fill_solid(leds, NUM_LEDS, CRGB(0,0,255));
+  FastLED.show();
+  delay(2000);
 }
 
 
