@@ -25,6 +25,8 @@ void Animation::begin() {
 
   this->startSeed();
 
+  this->setActivity();
+
   Serial << F("Animation. Startup complete.") << endl;
 }
 // sets FPS
@@ -67,6 +69,12 @@ void Animation::incrementPosition(int inc) {
 void Animation::startSeed(uint16_t seed) {
   random16_set_seed( seed );  // FastLED/lib8tion
   Serial << F("random seed=") << seed << endl;
+}
+void Animation::setActivity(fract8 chance) {
+  if( chanceAct != chance ) {
+    this->chanceAct = chance;
+    Serial << F("activity chance=") << this->chanceAct << endl;
+  }
 }
 
 // runs the animation
@@ -140,10 +148,9 @@ void Animation::aRainbow() {
   hueVal += hueInc;
 }
 
-// uses: hueVal, hueInc, posVal
+// uses: hueVal, hueInc, posVal, chanceAct
 void Animation::aGlitter() {
-  fract8 chanceOfGlitter = 80;
-  if( random8() < chanceOfGlitter) {
+  if( random8() < chanceAct ) {
     posVal += random8(NUM_LEDS);
     posVal %= NUM_LEDS;
     leds[0][posVal] = CHSV( hueVal, 255, 255 );
@@ -244,7 +251,7 @@ void Animation::aFire() {
 // SPARKING: What chance (out of 255) is there that a new spark will be lit?
 // Higher chance = more roaring fire.  Lower chance = more flickery fire.
 // Default 120, suggested range 50-200.
-#define SPARKING 50
+//#define SPARKING 50
 //#define SPARKING 200
 
   // Array of temperature readings at each simulation cell
@@ -261,7 +268,7 @@ void Animation::aFire() {
   }
 
   // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
-  if( random8() < SPARKING ) {
+  if( random8() < chanceAct ) {
     int y = random8(7);
     heat[y] = qadd8( heat[y], random8(160,255) );
   }

@@ -15,7 +15,7 @@ void Radio::begin(byte nodesStart, byte groupID, byte freq) {
   Serial << F("Waiting....") << endl;
   delay( random(0,MAX_NODES)*25UL ); // wait a tick
   
-  if( radio.receiveDone() && radio.DATALEN != sizeof(Message) ) { // someone's claimed a node number
+  if( radio.receiveDone() && radio.DATALEN==sizeof(Message) ) { // someone's claimed a node number
     msg = *(Message*)radio.DATA;  // read it
     nodeID = msg.nextNode;
     msg.nextNode ++;
@@ -36,14 +36,14 @@ void Radio::begin(byte nodesStart, byte groupID, byte freq) {
 
   // clear rssi tracking
   for(int i=0; i<MAX_NODES; i++) {
-    deltaRSSI[i]=0;
-    averageRSSI[i]=-50;
+    relRSSI[i]=1.0;
+    averageRSSI[i]=-50.0;
   }
 }
 
 void Radio::update() {
   // new traffic?
-  if( radio.receiveDone() && radio.DATALEN != sizeof(Message) ) {
+  if( radio.receiveDone() && radio.DATALEN==sizeof(Message) ) {
     // read it
     msg = *(Message*)radio.DATA;  
 
@@ -72,9 +72,29 @@ void Radio::recordRSSI(byte index, float rssi) {
   // running average
   const float nSamples=10.0;
   // score a delta relative to average
-  deltaRSSI[index] = rssi-averageRSSI[index];
+  relRSSI[index] = rssi/averageRSSI[index];
   // compute average
   averageRSSI[index] = (nSamples-1)/nSamples * averageRSSI[index] + 1/nSamples * rssi;
+}
+
+// trigger on delta RSSI
+boolean Radio::trigger(float rssiThresh, unsigned long cooldown) {
+
+  // track cooldown do we're not spamming triggers
+  static unsigned long lastTriggered = millis();
+  if( millis()-lastTriggered < cooldown ) return( false );
+
+  // check for a trigger
+  boolean ret = false;
+  for(int i=0; i<nNodes; i++) {
+    ret |= relRSSI[i] >= rssiThresh;
+    ret |= relRSSI[i] <= 1.0/rssiThresh;
+  }
+
+  // if we've triggered, note the time
+  if( ret ) lastTriggered = millis();
+
+  return( ret );
 }
 
 Radio R;

@@ -62,7 +62,8 @@ class Animation {
     void incrementPosition(int inc=1);
     // set the random seed for animation
     void startSeed(uint16_t seed = 1337);
-    // set the beat-per-minute
+    // set the fractional chance of animation activity (e.g "sparking")
+    void setActivity(fract8 chance=80);
     
     // runs the animation
     void runAnimation();
@@ -70,6 +71,7 @@ class Animation {
   private:
     byte anim, hueVal, posVal;   
     int hueInc, posInc;
+    fract8 chanceAct;
     
     Metro pushNextFrame;
     
