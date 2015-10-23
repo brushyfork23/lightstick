@@ -1,80 +1,98 @@
 #include "Radio.h"
 
 
-void Radio::begin(byte nodesStart, byte groupID, byte freq) {
+void Radio::begin(byte groupID, byte freq) {
   Serial << F("Radio. startup with unknown node number.") << endl;
 
-  radio.initialize(freq, nodesStart, groupID);
+  radio.initialize(freq, NODESTART, groupID);
+  setNodeID(NODESTART);
   radio.setHighPower(); // using RFM69HW board
   radio.promiscuous(true); // so broadcasts are received
-
-  // negotiate a node ID for myself
-  randomSeed(analogRead(A0)); // entropy
-  nNodes = 0; // initialize to none, we'll figure this out later
+  setPowerLevel();
   
   Serial << F("Waiting....") << endl;
   delay( random(0,MAX_NODES)*25UL ); // wait a tick
   
-  if( radio.receiveDone() && radio.DATALEN==sizeof(Message) ) { // someone's claimed a node number
-    msg = *(Message*)radio.DATA;  // read it
-    nodeID = msg.nextNode;
-    msg.nextNode ++;
-    msg.packetNumber ++;
-    radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
-
-    Serial << F("Radio. startup with negotiated nodeID=") << nodeID << endl;
-  } else { // nobody's claimed a node number.  let's do that
-    nodeID = nodesStart;
-    msg.nextNode = nodeID+1;
-    msg.packetNumber = 0;
-    radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
-
-    Serial << F("Radio. startup with claimed nodeID=") << nodeID << endl;
-  }
-  // save this, in case we get directed traffic
-  radio.setAddress(nodeID);
-
   // clear rssi tracking
   for(int i=0; i<MAX_NODES; i++) {
     relRSSI[i]=1.0;
-    averageRSSI[i]=-50.0;
+    averageRSSI[i]=CSMA_LIMIT;
   }
+  
+  // set up pin
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+}
+
+void Radio::setNodeID(byte node) {
+  this->nodeID = node % (NODESTART + MAX_NODES); // wrap, if needed
+  
+  Serial << F("set nodeID=") << this->nodeID << endl;
+  radio.setAddress(this->nodeID);
+}
+void Radio::setPowerLevel(byte level) {
+  if( level>31 ) return; // wrap
+  Serial << F("set power level=") << level << endl;
+  
+  this->powerLevel = level;
+  msg.powerLevel = level;
+  radio.setPowerLevel(level);
 }
 
 void Radio::update() {
   // new traffic?
   if( radio.receiveDone() && radio.DATALEN==sizeof(Message) ) {
+    digitalWrite(LED_PIN, HIGH);
+    
     // read it
     msg = *(Message*)radio.DATA;  
 
     // record RSSI
-    recordRSSI(radio.SENDERID-NODESTART, radio.readRSSI());
+//    recordRSSI(radio.SENDERID-NODESTART, radio.readRSSI());
+    recordRSSI(radio.SENDERID-NODESTART, radio.RSSI);
     
-    // has someone joined?
-    byte totalNodes = radio.SENDERID-NODESTART+1; 
-    if( totalNodes > nNodes ) {
-      nNodes = totalNodes;
-      Serial << F("Radio.  new node detected.  nNodes=") << nNodes << endl;
-    }
-
-    // am I next in the round-robin transmission?
-    if( msg.nextNode = nodeID ) {
-      msg.nextNode++;
-      if( msg.nextNode >= nNodes ) msg.nextNode = NODESTART; // loop
-      msg.packetNumber++;
-      radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
-    }   
+    // has someone claimed my nodeID already?
+    if( radio.SENDERID == nodeID ) setNodeID(radio.SENDERID+1);
+    // is the RSSI too high?  cut the power down
+//    if( radio.RSSI > RSSI_TARGET ) setPowerLevel(powerLevel-1);
+    // someone else could have called for this, too.
+//    if( msg.powerLevel != powerLevel ) setPowerLevel(msg.powerLevel);
+    
+    digitalWrite(LED_PIN, LOW);
   }
+  
+  // am I next in the round-robin transmission?
+  static unsigned long lastSend = millis();
+
+  if( millis()-lastSend > PING_EVERY && radio.readRSSI() > CSMA_LIMIT ) {       
+    msg.packetNumber++;
+    radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
+    lastSend = millis();
+  }   
+
 }
 
 // record RSSI
-void Radio::recordRSSI(byte index, float rssi) {
+void Radio::recordRSSI(byte index, int rssi) {
+/*
+  // check for realistic RSSI
+  if( rssi < (CSMA_LIMIT+RSSI_THRESH) ) {
+    Serial << "bad rssi=" << rssi << endl;
+    return;
+  }
+*/
+  if( averageRSSI[index]==CSMA_LIMIT ) averageRSSI[index]=rssi; // dirty startup
+  
   // running average
   const float nSamples=10.0;
   // score a delta relative to average
   relRSSI[index] = rssi/averageRSSI[index];
+  
   // compute average
   averageRSSI[index] = (nSamples-1)/nSamples * averageRSSI[index] + 1/nSamples * rssi;
+ 
+  Serial << F("Record node:") << index << F("\trssi=") << rssi << F("\tavg rssi=");
+  Serial << averageRSSI[index] << F("\trel rssi=") << relRSSI[index] << endl;   
 }
 
 // trigger on delta RSSI
@@ -86,7 +104,7 @@ boolean Radio::trigger(float rssiThresh, unsigned long cooldown) {
 
   // check for a trigger
   boolean ret = false;
-  for(int i=0; i<nNodes; i++) {
+  for(int i=0; i<MAX_NODES; i++) {
     ret |= relRSSI[i] >= rssiThresh;
     ret |= relRSSI[i] <= 1.0/rssiThresh;
   }

@@ -7,24 +7,25 @@
 #include "Animations.h"
 #include "Radio.h"
 
-#define LOWACT 20 // little bit of flare
-#define HIGHACT 80 // lots of flare when triggered
-#define FLAREDUR 1000UL // flare for this long when triggered
+#define LOWACT 15 // little bit of flare
+#define HIGHACT 100 // lots of flare when triggered
+#define FLAREDUR 5000UL // flare for this long when triggered
 
 void setup() {
   delay(500); // delay for upload
    
   Serial.begin(115200);
-  
+   
+  // start the radio
+  R.begin();
+
   // startup animation
   A.begin();
   
   // see Animations.h for other options.
   A.startAnimation(A_FIRE);
   A.setActivity(LOWACT);
-  
-  // start the radio
-  R.begin();
+
 }
 
 void loop()
@@ -34,16 +35,19 @@ void loop()
 
   // check for trigger
   static unsigned long lastTriggered = millis();
-  const unsigned long flareFor = FLAREDUR;
-  if( R.trigger() ) {
+  boolean canTrigger = millis()-lastTriggered > FLAREDUR;
+  
+  if( R.trigger() && canTrigger ) {
+    Serial << F("** TRIGGER! **") << endl;
     A.setActivity(HIGHACT); // lots of fire
     lastTriggered = millis();
-  }
-
-  // cool it down after triggering
-  if( millis()-lastTriggered > flareFor ) A.setActivity(LOWACT);
+  } 
+  
+  boolean cooldown = millis()-lastTriggered > FLAREDUR;
+  if( cooldown) A.setActivity(LOWACT); // cool it down after triggering
   
   // run it
   A.runAnimation();
+  
 }
 

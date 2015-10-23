@@ -9,8 +9,8 @@ CRGB leds[NUM_STRIPS][NUM_LEDS];
 // startup
 void Animation::begin() {
   // tell FastLED about the LED strip configuration
-  FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds[0], NUM_LEDS);
-  FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds[1], NUM_LEDS);
+  FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds[0], NUM_LEDS).setCorrection(TypicalSMD5050);
+  FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds[1], NUM_LEDS).setCorrection(TypicalSMD5050);
 
   this->setFPS();
   this->setMasterBrightness();
