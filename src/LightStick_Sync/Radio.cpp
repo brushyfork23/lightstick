@@ -25,7 +25,8 @@ void Radio::begin(byte groupID, byte freq) {
 }
 
 void Radio::setNodeID(byte node) {
-  this->nodeID = node % (NODESTART + MAX_NODES); // wrap, if needed
+  if( node < NODESTART || node > (NODESTART+MAX_NODES)) this->nodeID = NODESTART;
+  else this->nodeID = node; // wrap, if needed
   
   Serial << F("set nodeID=") << this->nodeID << endl;
   radio.setAddress(this->nodeID);
@@ -54,7 +55,7 @@ void Radio::update() {
     recordRSSI(radio.SENDERID-NODESTART, radio.RSSI);
     
     // has someone claimed my nodeID already?
-    if( radio.SENDERID == nodeID ) setNodeID(radio.SENDERID+1);
+    if( radio.SENDERID == nodeID ) setNodeID(nodeID+1);
     // is the RSSI too high?  cut the power down
 //    if( radio.RSSI > RSSI_TARGET ) setPowerLevel(powerLevel-1);
     // someone else could have called for this, too.
@@ -69,8 +70,10 @@ void Radio::update() {
   if( millis()-lastSend > PING_EVERY && radio.readRSSI() > CSMA_LIMIT ) {       
     msg.packetNumber++;
     msg.doTrigger = false;
+    Serial << F("sending ping from myNode:") << nodeID; 
     radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
     lastSend = millis();
+    Serial << F(".  done.") << endl;
   }   
 
 }
@@ -94,7 +97,7 @@ void Radio::recordRSSI(byte index, int rssi) {
   // compute average
   averageRSSI[index] = (nSamples-1)/nSamples * averageRSSI[index] + 1/nSamples * rssi;
  
-  Serial << F("Record node:") << index << F("\trssi=") << rssi << F("\tavg rssi=");
+  Serial << F("Record node:") << index+NODESTART << F("\trssi=") << rssi << F("\tavg rssi=");
   Serial << averageRSSI[index] << F("\trel rssi=") << relRSSI[index] << endl;   
 }
 
@@ -117,13 +120,14 @@ boolean Radio::trigger(float rssiThresh, unsigned long cooldown) {
     // announce by packet that we'll trigger
     msg.packetNumber++;
     msg.doTrigger = true;
+    Serial << F("trigger by RSSI.  sending trigger by radio from myNode:") << nodeID;   
     radio.send(BROADCAST, (const void*)(&msg), sizeof(Message));
-    Serial << F("trigger by RSSI.  sending trigger by radio.") << endl;   
-
+    Serial << F(". done.") << endl;
+    
     ret |= true; 
     msg.doTrigger = false;
   } else if( msg.doTrigger ) {
-    Serial << F("trigger by radio.") << endl;
+    Serial << F("got trigger by radio.") << endl;
     ret |= true;
   }
 
