@@ -2,7 +2,6 @@
 #define Radio_h
 
 #include <Arduino.h>
-#include <Metro.h>
 #include <Streaming.h>
 
 // radio
@@ -18,7 +17,7 @@
 // comms settings and information
 #define BROADCAST     0  // all nodes will hear this
 #define GROUPID       158  // local group
-#define POWERLEVEL      31 // 0-31, 31 being maximal
+#define POWERLEVEL      15 // 0-31, 31 being maximal
 #define CONTROLLER_NODE     253 // nodeID of wireless programmer
 
 // pin definitions common to Moteuinos
@@ -26,13 +25,10 @@
 #define FLASH_SS  8 // and FLASH SS on D8
 #define FLASH_ID  0xEF30 // EF30 for windbond 4mbit flash
 
-SPIFlash flash(FLASH_SS, FLASH_ID); 
-
 typedef struct {
   char          pgm; //program to execute
   uint8_t       num; //numeric value 
 } Payload;
-Payload payload;
 
 class Radio {
   public:
@@ -40,6 +36,8 @@ class Radio {
     void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
     void update();
     void sendAck();
+    void sendProgram(byte pgm);
+    void sendVal(byte val);
     // return my node ID
     byte myNodeID; // 26-28 for Lights
     char pgm;
@@ -48,10 +46,15 @@ class Radio {
 
   private:
     RFM69 radio;
+    // message storage
+    Payload payload;
+    void sendPayload(Payload payload);
 };
 
 
 extern Radio R;
 
 #endif
+
+
 

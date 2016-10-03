@@ -1,18 +1,19 @@
-#include <FastLED.h>
-#include <Metro.h>
 #include <Streaming.h>
-#include <SPI.h> // for radio board 
-#include <RFM69.h> // RFM69HW radio transmitter module
+#include <Metro.h>
 
-#include "Animations.h"
+#include <RFM69.h> // RFM69HW radio transmitter module
+#include <SPI.h> // for radio board 
+#include <SPIFlash.h>
+#include <avr/wdt.h>
+#include <WirelessHEX69.h>
+#include <EEPROM.h>
+
+#include <FastLED.h>
+#include <FiniteStateMachine.h>
+
 #include "Radio.h"
 
-// #include <SPIFlash.h>
-// #include <avr/wdt.h>
-// #include <WirelessHEX69.h>
-// #include <EEPROM.h>
-
-// #include <FiniteStateMachine.h>
+#include "Animations.h"
 
 // enumerate animation modes
 enum program_t {
@@ -115,9 +116,6 @@ void loop() {
 
   R.hasUnorocessedPayload = false;
 }
-
-
-
 
 
 

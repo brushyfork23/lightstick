@@ -11,6 +11,8 @@
 
 #include <FiniteStateMachine.h>
 
+#include "Radio.h"
+
 // Establish Control NodeId
 
 // define char inChar,
@@ -49,157 +51,65 @@
 
 
 
-// enumerate animation modes
-enum program_t {
-  P_MANUAL=0,
-  P_AUDIO,
-  P_DELAY_TEST,
-  
-  N_PROGRAMS
-};
+byte pgm=77;
+
+char input[64]; //serial input buffer
+
+bool hasNewInput = false;
 
 void setup() {
+  delay(500);
+
   Serial.begin(115200);
 
-  N.begin(CONTROLLER_NODE);
+  // Establish Control NodeId and start radio
+  R.begin(CONTROLLER_NODE);
  
   Serial.println("Start Controller...");
 }
 
-// track our response using a finite state machine
-// idle <--> outPlane <--> inPlane
-void idleUpdate();
-State idle = State(idleUpdate); // nothing going on
-void inPlaneUpdate();
-State inPlane = State(inPlaneUpdate); // sensors are picking up an object, and it's within the place of the triangle
-FSM S = FSM(idle); // start idle
-
-// track the average of Ch and Cb
-unsigned long Ch = HL;
-unsigned long Cb = HL;
-byte window = 3; // how many sensor measurements do we average to smooth Cb and Ch?
-// each read is about 17 ms, 
-// so the for three sensors of updates, we're talking ~50ms. 
-
-// track state
-systemState lastState;
-
-void setup() {
-
-  Serial.begin(115200);
-
-  // start the radio
-  N.begin();
-
-  // wait enough time to get a reprogram signal
-  Metro startupDelay(1000UL);
-  while (! startupDelay.check()) N.update();
-
-  // start the location subsystem
-  L.begin(N.distance);
-
-  // startup animation
-  A.begin();
-
-}
-
-boolean objectInPlane() {
-  return(
-    N.distance[0] <= IN_PLANE || N.distance[1] <= IN_PLANE || N.distance[2] <= IN_PLANE
-//      true
-  );
-}
-
 void loop() {
-  // update the radio traffic
-  if( N.update() ) {
-//    Serial << F("RX: ");
-//    N.showNetwork();
-    N.decodeMessage(); // decode the message to distance information
-    L.calculateLocation(); // translate distance to altitude and intercept information
-
-    // running average
-    Cb = ((window-1)*Cb + L.Cb[N.myIndex])/window;
-    Ch = ((window-1)*Ch + L.Ch[N.myIndex])/window;
-
-//    Serial << F("Cb=") << L.Cb[N.myIndex] << F(" avg=") << Cb;
-//    Serial << F("\tCh=") << L.Ch[N.myIndex] << F(" avg=") << Ch;
-//    Serial << endl;
+  byte inputLen = 0;
+  if( Serial.available() > 0 ) {
+    inputLen = readSerialLine(input, 10, 64, 100); //readSerialLine(char* input, char endOfLineChar=10, byte maxLength=64, uint16_t timeout=1000);
+    Serial << F("Received input with len: ") << inputLen << endl;
+    hasNewInput = true;
   }
 
-  // check for system mode changes
-  if ( N.state != lastState ) {
-    if ( N.state == M_CALIBRATE ) {
-      A.setAnimation(A_CALIBRATE, false);
-    } else if ( N.state == M_PROGRAM ) {
-      A.setAnimation(A_PROGRAM, false);
-    } else if ( N.state == M_NORMAL ) {
-      S.transitionTo( idle );
-      A.setAnimation( A_IDLE, false );
-    }
-    lastState = N.state;
+  if (inputLen > 0) {
+    String inStr = String(input);
+    Serial << F("Input: ") << inStr << endl;
   }
-  
-  // update the FSM, letting it set animations as needed.
-  S.update();
 
-  // update the animation
-  A.update();
+  if (inputLen == 2 && input[0] == 80) { // 80 = P
+    Serial << F("Changing program to: ") << input[1] << endl;
+    //Serial << F("Enter new program cmd (Options: D = Delay Test, M = Manual, A = Audio:") << endl;
+    //while( ! Serial.available() );
+    //pgm = Serial.read();
+    pgm = input[1];
+    R.sendProgram(input[1]);
+  }
+
+  char buff[inputLen-1];
+  switch(pgm) {
+    case 68: // D
+      break;
+    case 77: // M
+      if (hasNewInput) {
+        for(int i = 1; i < inputLen; i++) {
+          buff[i-1] += input[i];
+        }
+        buff[inputLen-1] = '\0';
+        Serial << F("Sending value: ") << atoi(buff) << endl;
+        R.sendVal(atoi(buff));
+      }
+      break;
+    case 65: // A
+      break;
+  }
+
+  hasNewInput = false;
 }
 
-void idleUpdate() {
-  // until we get normalized, stay idle
-  if ( N.state != M_NORMAL ) return;
 
-  // check for state changes
-  static Metro goInPlaneTimeout(500UL);
-  if ( ! objectInPlane() ) goInPlaneTimeout.reset();
-
-  // do we detect something out there?
-  if ( goInPlaneTimeout.check() ) {
-    Serial << F("State.  idle->inPlane.") << endl;
-    S.transitionTo( inPlane );
-    A.setMasterBrightness( 255 ); // restore brightness
-    A.setAnimation( A_INPLANE, false );
-  }
-}
-
-void inPlaneUpdate() {
-  // until we get normalized, stay idle
-  if ( N.state != M_NORMAL ) return;
-  
-//  Serial << F("L.Cb=") << L.Cb[N.myIndex] << F("\tL.Ch=") << L.Ch[N.myIndex] << endl;
-
-  // drive shadow center according to intercept
-  A.setCenter(
-    map(
-//      constrain(L.Cb[N.myIndex], 0, SL),  // constrain x to be [0, SL]
-      constrain(Cb, 0, SL),  // constrain x to be [0, SL]
-      0, SL, // map [0, SL]
-      0, NUM_LEDS - 1 // to [0, NUM_LEDS-1]
-    )
-  );
-
-  // drive shadow extent according to range
-  A.setExtent(
-    map(
-//      constrain(L.Ch[N.myIndex], 0, SL),
-      constrain(Ch, 0, SL),
-      0, SL, // map [0, HL]
-      0, NUM_LEDS / 2 // to [0, NUM_LEDS/2]
-    )
-  );
-
-  // check for state changes
-  static Metro goIdleTimeout(500UL);
-  if ( objectInPlane() ) goIdleTimeout.reset();
-
-  // nothing to see here or no longer in normal operation?
-  if ( goIdleTimeout.check() || N.state != M_NORMAL ) {
-    Serial << F("State.  inPlane->idle.") << endl;
-    S.transitionTo( idle );
-    A.setAnimation( A_IDLE, false );
-  }
-
-}
 

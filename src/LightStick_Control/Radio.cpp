@@ -1,5 +1,9 @@
 #include "Radio.h"
 
+SPIFlash flash(FLASH_SS, FLASH_ID); 
+
+Payload payload;
+
 void Radio::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
   // Establish My NodeId
   // EEPROM location for radio settings.
@@ -47,4 +51,20 @@ void Radio::sendAck() {
   radio.sendACK();
 }
 
+void Radio::sendProgram(byte pgm) {
+  payload.pgm = pgm;
+  sendPayload(payload);
+}
+
+void Radio::sendVal(byte val) {
+  payload.num = val;
+  sendPayload(payload);
+}
+
+void Radio::sendPayload(Payload payload) {
+  Serial << F("Sending struct (") << sizeof(payload) << F(" bytes) ... ") << endl;
+  radio.send(BROADCAST, (const void*)(&payload), sizeof(Payload));
+}
+
 Radio R;
+
