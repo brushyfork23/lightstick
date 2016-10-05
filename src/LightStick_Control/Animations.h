@@ -27,7 +27,8 @@ FASTLED_USING_NAMESPACE
 
 // enumerate animation modes
 enum animation_t {
-  A_SOLID=0,
+  A_STABLE=0,
+  A_SOLID,
   A_RAINBOW,
   A_GLITTER,
   A_CONFETTI,
@@ -53,7 +54,7 @@ class Animation {
 
     // animations control
     // sets the animation 
-    void startAnimation(byte animation=A_SOLID, boolean clearStrip=true); 
+    void startAnimation(byte animation=A_STABLE, boolean clearStrip=true); 
     // sets the hue start and increment for animation
     void startHue(byte hue=0);
     void incrementHue(int inc=1);
@@ -75,6 +76,7 @@ class Animation {
     
     Metro pushNextFrame;
     
+    void aStable();
     void aSolid();
     void aRainbow();
     void aGlitter();

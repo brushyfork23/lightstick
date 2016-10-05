@@ -84,6 +84,9 @@ void Animation::runAnimation() {
   static boolean nextFrameReady = false;
   if( ! nextFrameReady ) {
     switch( anim ) {
+    case A_STABLE: 
+      aStable(); 
+      break;
     case A_SOLID: 
       aSolid(); 
       break;
@@ -128,6 +131,12 @@ void Animation::runAnimation() {
     pushNextFrame.reset();  // setup for next frame push
   } 
 
+}
+
+// uses: hueVal
+void Animation::aStable() {
+  // FastLED's built-in solid fill (colorutils.h)
+  fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, 255) );
 }
 
 // uses: hueVal, hueInc

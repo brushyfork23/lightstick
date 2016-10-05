@@ -1,3 +1,6 @@
+
+//#include <CmdMessenger.h> // Serial Console
+
 // Include libraries for serial, eeprom, and radio
 #include <Streaming.h>
 #include <Metro.h>
@@ -9,9 +12,12 @@
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
 
-#include <FiniteStateMachine.h>
+//#include <FiniteStateMachine.h>
 
 #include "Radio.h"
+
+//------ Input units.
+#include "Mic.h" // Microphone
 
 // Establish Control NodeId
 
@@ -51,24 +57,142 @@
 
 
 
-byte pgm=77;
+#define TRIGGER_BAND 6 // audio band to monitor volume on
 
-char input[64]; //serial input buffer
 
+enum
+{
+  // Commands
+  kManual=0      ,
+  kAudio       , 
+  kDelayTest   ,
+};
+
+// Attach a new CmdMessenger object to the default Serial port
+//CmdMessenger cmdMessenger = CmdMessenger(Serial);
+
+int inVal = 0;
 bool hasNewInput = false;
+byte pgm=kManual;
+
+/*void attachCommandCallbacks()
+{
+  // Attach callback methods
+  cmdMessenger.attach(OnUnknownCommand);
+  cmdMessenger.attach(kManual, OnManualCmd);
+  cmdMessenger.attach(kAudio, OnAudioCmd);
+  cmdMessenger.attach(kDelayTest, OnDelayCmd);
+}
+// ------------------  C A L L B A C K S -----------------------
+
+// Called when a received command has no attached function
+void OnUnknownCommand()
+{
+  Serial << F("Changing program to: Manual") << endl;
+
+  byte pgm=kManual;
+
+  R.sendProgram(pgm);
+
+  recordNewInVal();
+}
+
+// Callback function that responds that Arduino is ready (has booted up)
+void OnAudioCmd()
+{
+  Serial << F("Changing program to: Audio") << endl;
+
+  byte pgm=kAudio;
+
+  R.sendProgram(pgm);
+}
+
+// Callback function calculates the sum of the two received float values
+void OnDelayCmd()
+{
+  Serial << F("Changing program to: Delay Test") << endl;
+
+  byte pgm=kDelayTest;
+
+  R.sendProgram(pgm);
+}
+
+// Callback function calculates the sum of the two received float values
+void OnManualCmd()
+{
+  Serial << F("Changing program to: Manual") << endl;
+
+  byte pgm=kManual;
+
+  R.sendProgram(pgm);
+
+  recordNewInVal();
+}
+
+void recordNewInVal() {
+  // Retreive first parameter as int
+  inVal = cmdMessenger.readInt16Arg();
+  hasNewInput = true;
+}
+*/
+
+// ------------------ M A I N  ----------------------
 
 void setup() {
   delay(500);
 
   Serial.begin(115200);
 
+  //------ Input units.
+  listenLine.begin(MIC_RESET_PIN, MIC_STROBE_PIN, MIC_OUT_PIN); // only listens to line in
+  
   // Establish Control NodeId and start radio
   R.begin(CONTROLLER_NODE);
  
+  // Attach my application's user-defined callback methods
+//  attachCommandCallbacks();
+
   Serial.println("Start Controller...");
 }
 
 void loop() {
+
+  //cmdMessenger.feedinSerialData();
+
+  if( Serial.available() > 0 ) {
+    inVal = Serial.parseInt();
+    Serial << F("Reading new value: ") << inVal << endl;
+    hasNewInput = true;
+    switch(inVal) {
+      case kManual:
+        if (!pgm == kManual) {
+          Serial << F("Changing program to: Manual") << endl;
+          
+          pgm=kManual;
+  
+          R.sendProgram(pgm);
+          
+          hasNewInput = false;
+        }
+        break;
+      case kAudio:
+        Serial << F("Changing program to: Audio") << endl;
+
+        pgm=kAudio;
+      
+        R.sendProgram(pgm);
+        break;
+      case kDelayTest:
+        Serial << F("Changing program to: Delay Test") << endl;
+
+        pgm=kDelayTest;
+      
+        R.sendProgram(pgm);
+        break;
+    }
+  }
+  
+  /*
   byte inputLen = 0;
   if( Serial.available() > 0 ) {
     inputLen = readSerialLine(input, 10, 64, 100); //readSerialLine(char* input, char endOfLineChar=10, byte maxLength=64, uint16_t timeout=1000);
@@ -89,27 +213,24 @@ void loop() {
     pgm = input[1];
     R.sendProgram(input[1]);
   }
+  */
 
-  char buff[inputLen-1];
   switch(pgm) {
-    case 68: // D
+    case kDelayTest:
       break;
-    case 77: // M
+    case kManual:
       if (hasNewInput) {
-        for(int i = 1; i < inputLen; i++) {
-          buff[i-1] += input[i];
-        }
-        buff[inputLen-1] = '\0';
-        Serial << F("Sending value: ") << atoi(buff) << endl;
-        R.sendVal(atoi(buff));
+        Serial << F("Sending manual value: ") << inVal << endl;
+        R.sendVal(inVal);
+        hasNewInput = false;
       }
       break;
-    case 65: // A
+    case kAudio:
+      listenLine.update();   // populate avg
+      listenLine.update();   // populate avg
+      int vol = listenLine.getAvg(TRIGGER_BAND);
+      Serial << F("Sending vol value: ") << vol << endl;
+      R.sendVal(vol);
       break;
   }
-
-  hasNewInput = false;
 }
-
-
-

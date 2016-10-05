@@ -15,13 +15,12 @@
 
 #include "Animations.h"
 
-// enumerate animation modes
-enum program_t {
-  P_MANUAL=0,
-  P_AUDIO,
-  P_DELAY_TEST,
-  
-  N_PROGRAMS
+enum
+{
+  // Commands
+  kManual=0      ,
+  kAudio       , 
+  kDelayTest   ,
 };
 
 // Establish My NodeId
@@ -61,8 +60,8 @@ enum program_t {
 //    case AUDIO
 //      set brightness = 0
 
-char program=0;
-byte hueVal;
+byte program=kManual;
+int16_t hueVal;
 
 void setup() {
   delay(500); // delay for upload
@@ -83,36 +82,45 @@ void loop() {
 
   // Update program if new
   if (R.hasUnorocessedPayload && R.pgm != program) {
+    Serial << F("Unprocessed Payload: ");
     program = R.pgm;
     switch(program) {
-      case P_MANUAL:
+      case kManual:
+        Serial << F("Manual") << endl;
         hueVal = 0;
         break;
-      case P_AUDIO:
+      case kAudio:
+        Serial << F("Audio") << endl;
         A.setMasterBrightness(0);
         break;
-      case P_DELAY_TEST:
+      case kDelayTest:
+        Serial << F("Delay Test") << endl;
         break;
     }
   }
 
   switch (program) {
-    case P_MANUAL:
-      A.startHue(R.num);
-      A.runAnimation();
+    case kManual:
+      if (R.hasUnorocessedPayload) {
+        Serial << F("Received manual Hue: ") << R.num << endl;
+        A.startHue(R.num);
+      }
       break;
-    case P_AUDIO:
-      A.setMasterBrightness(R.num);
-      A.runAnimation();
+    case kAudio:
+      if (R.hasUnorocessedPayload) {
+        Serial << F("Received audio vol: ") << R.num << endl;
+        A.setMasterBrightness(R.num);
+      }
       break;
-    case P_DELAY_TEST:
+    case kDelayTest:
       if (R.hasUnorocessedPayload) {
         A.incrementHue(1);
-        A.runAnimation();
         R.sendAck();
       }
       break;
   }
+  
+  A.runAnimation();
 
   R.hasUnorocessedPayload = false;
 }

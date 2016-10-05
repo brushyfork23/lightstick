@@ -27,7 +27,7 @@
 
 typedef struct {
   char          pgm; //program to execute
-  uint8_t       num; //numeric value 
+  int16_t       num; //numeric value 
 } Payload;
 
 class Radio {
@@ -41,7 +41,7 @@ class Radio {
     // return my node ID
     byte myNodeID; // 26-28 for Lights
     char pgm;
-    uint8_t num;
+    int16_t num;
     bool hasUnorocessedPayload;
 
   private:
