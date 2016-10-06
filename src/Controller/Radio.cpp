@@ -62,7 +62,7 @@ void Radio::sendVal(byte val) {
 }
 
 void Radio::sendPayload(Payload payload) {
-  Serial << F("Sending struct (") << sizeof(payload) << F(" bytes) ... ") << endl;
+  //Serial << F("Sending struct (") << sizeof(payload) << F(" bytes) ... ") << endl;
   radio.send(BROADCAST, (const void*)(&payload), sizeof(Payload));
 }
 

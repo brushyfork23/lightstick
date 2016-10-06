@@ -56,10 +56,6 @@
 
 
 
-
-#define TRIGGER_BAND 6 // audio band to monitor volume on
-
-
 enum
 {
   // Commands
@@ -71,9 +67,30 @@ enum
 // Attach a new CmdMessenger object to the default Serial port
 //CmdMessenger cmdMessenger = CmdMessenger(Serial);
 
-int inVal = 0;
 bool hasNewInput = false;
-byte pgm=kManual;
+byte pgm=kAudio,
+     inVal;
+
+#define TRIGGER_BAND 6 // audio band to monitor volume on
+#define NOISE     100                                         // Noise/hum/interference in mic signal and increased value until it went quiet
+#define SAMPLES   60                                          // Length of buffer for dynamic level adjustment
+#define TOP       1023                                         // Allow peak to be slightly off scale
+
+#define DELAYED_FALL false                                    // Toggle delayed height falling
+#define FALL_RATE 20                                          // Rate height falling
+
+
+byte
+  volCount    = 0,                                            // Frame counter for storing past volume data
+  height      = 0,                                            // Used for falling height
+  delayFallCount = 0;                                         // Frame counter for delaying height falling speed
+int
+  vol[SAMPLES],                                               // Collection of prior volume samples
+  lvl       = 10,                                             // Current "dampened" audio level
+  minLvlAvg = 0,                                              // For dynamic adjustment of graph low & high
+  maxLvlAvg = 1023,
+  amplitude = 0;                                              // Current amplitude value
+  int highest = 0;
 
 /*void attachCommandCallbacks()
 {
@@ -226,11 +243,59 @@ void loop() {
       }
       break;
     case kAudio:
+      updateAmplitude();
+      /*
       listenLine.update();   // populate avg
-      listenLine.update();   // populate avg
-      int vol = listenLine.getAvg(TRIGGER_BAND);
-      Serial << F("Sending vol value: ") << vol << endl;
-      R.sendVal(vol);
+      int amplitude = listenLine.getAvg(TRIGGER_BAND);
+      amplitude = massageVol(amplitude);
+      */
+      //Serial << F("Sending avg vol: ") << amplitude << endl;
+      R.sendVal(amplitude);
       break;
   }
 }
+
+void updateAmplitude() {
+  uint8_t  i;
+  uint16_t minLvl, maxLvl;
+   
+  /*
+  int n = analogRead(MIC_PIN);                                    // Raw reading from mic
+  n = abs(n - 512 - DC_OFFSET);                               // Center on zero
+  */
+  listenLine.update();
+  int n = listenLine.getVol(TRIGGER_BAND);
+  
+  n = (n <= NOISE) ? 0 : (n - NOISE);                         // Remove noise/hum
+  lvl = ((lvl * 7) + n) >> 3;                                 // "Dampened" reading (else looks twitchy)
+
+  // Calculate bar height based on dynamic min/max levels (fixed point):
+  //amplitude = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
+  amplitude = map(lvl, 0, TOP, 0, 255); 
+  //amplitude = map(lvl, minLvlAvg, maxLvlAvg, 0, 255); 
+
+  Serial << F("n, l, amp: ") << n << ", " << lvl << ", " << amplitude << endl;
+  
+  if (amplitude < 0L)       amplitude = 0;                          // Clip output
+  else if (amplitude > TOP) amplitude = TOP;
+  
+  vol[volCount] = n;                                          // Save sample for dynamic leveling
+  if (++volCount >= SAMPLES) volCount = 0;                    // Advance/rollover sample counter
+ 
+  // Get volume range of prior frames
+  minLvl = maxLvl = vol[0];
+  for (i=1; i<SAMPLES; i++) {
+    if (vol[i] < minLvl)      minLvl = vol[i];
+    else if (vol[i] > maxLvl) maxLvl = vol[i];
+  }
+  // minLvl and maxLvl indicate the volume range over prior frames, used
+  // for vertically scaling the output graph (so it looks interesting
+  // regardless of volume level).  If they're too close together though
+  // (e.g. at very low volume levels) the graph becomes super coarse
+  // and 'jumpy'...so keep some minimum distance between them (this
+  // also lets the graph go to zero when no sound is playing):
+  if((maxLvl - minLvl) < TOP) maxLvl = minLvl + TOP;
+  minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6;                 // Dampen min/max levels
+  maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6;                 // (fake rolling average)
+}
+
