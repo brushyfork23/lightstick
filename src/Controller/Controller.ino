@@ -62,6 +62,10 @@ enum
   kManual=0      ,
   kAudio       , 
   kDelayTest   ,
+  kDropFreq,
+  kRaiseFreq,
+  kDropVol,
+  kRaiseVol,
 };
 
 // Attach a new CmdMessenger object to the default Serial port
@@ -71,8 +75,9 @@ bool hasNewInput = false;
 byte pgm=kAudio,
      inVal;
 
-#define TRIGGER_BAND 6 // audio band to monitor volume on
-#define NOISE     100                                         // Noise/hum/interference in mic signal and increased value until it went quiet
+uint8_t triggerBand = 4; // audio band to monitor volume on
+uint16_t squash = 100;  // volume to subtract.  Dynamically drop when lights are too bright or never go completely dark.
+
 #define SAMPLES   60                                          // Length of buffer for dynamic level adjustment
 #define TOP       1023                                         // Allow peak to be slightly off scale
 
@@ -206,6 +211,38 @@ void loop() {
       
         R.sendProgram(pgm);
         break;
+      case kDropFreq:
+        if (triggerBand > 0) {
+          triggerBand = triggerBand - 1;
+          Serial << F("Dropping trigger band to: ") << triggerBand << endl;
+        } else {
+          Serial << F("Trigger band at floor") << endl;
+        }
+        break;
+      case kRaiseFreq:
+        if (triggerBand < 6) {
+          triggerBand = triggerBand + 1;
+          Serial << F("Raising trigger band to: ") << triggerBand << endl;
+        } else {
+          Serial << F("Trigger band at ceiling") << endl;
+        }
+        break;
+      case kDropVol:
+        if (squash < 1003) {
+          squash = squash + 20;
+          Serial << F("Raising squash to: ") << squash << endl;
+        } else {
+          Serial << F("Squash at ceiling") << endl;
+        }
+        break;
+      case kRaiseVol:
+        if (squash < 21) {
+          squash = squash - 20;
+          Serial << F("Dropping squash to: ") << squash << endl;
+        } else {
+          Serial << F("Squash at floor") << endl;
+        }
+        break;
     }
   }
   
@@ -264,9 +301,9 @@ void updateAmplitude() {
   n = abs(n - 512 - DC_OFFSET);                               // Center on zero
   */
   listenLine.update();
-  int n = listenLine.getVol(TRIGGER_BAND);
+  int n = listenLine.getVol(triggerBand);
   
-  n = (n <= NOISE) ? 0 : (n - NOISE);                         // Remove noise/hum
+  n = (n <= squash) ? 0 : (n - squash);                         // Remove noise/hum
   lvl = ((lvl * 7) + n) >> 3;                                 // "Dampened" reading (else looks twitchy)
 
   // Calculate bar height based on dynamic min/max levels (fixed point):
@@ -274,7 +311,7 @@ void updateAmplitude() {
   amplitude = map(lvl, 0, TOP, 0, 255); 
   //amplitude = map(lvl, minLvlAvg, maxLvlAvg, 0, 255); 
 
-  Serial << F("n, l, amp: ") << n << ", " << lvl << ", " << amplitude << endl;
+  //Serial << F("n, l, amp: ") << n << ", " << lvl << ", " << amplitude << endl;
   
   if (amplitude < 0L)       amplitude = 0;                          // Clip output
   else if (amplitude > TOP) amplitude = TOP;
