@@ -7,13 +7,9 @@
 // MSGEQ7 datasheet: https://www.sparkfun.com/datasheets/Components/General/MSGEQ7.pdf
 // pin locations
 
-#define WAV_OUT_PIN A0
-#define WAV_STROBE_PIN A1
-#define WAV_RESET_PIN A2
-
-#define MIC_OUT_PIN A3
-#define MIC_STROBE_PIN A4
-#define MIC_RESET_PIN A5
+#define MIC_OUT_PIN A0
+#define MIC_STROBE_PIN A1
+#define MIC_RESET_PIN A2
 
 #define NUM_FREQUENCY_BANDS    7
 

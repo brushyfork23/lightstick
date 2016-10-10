@@ -27,7 +27,8 @@ FASTLED_USING_NAMESPACE
 
 // enumerate animation modes
 enum animation_t {
-  A_STABLE=0,
+  A_PULSE=0,
+  A_STABLE,
   A_SOLID,
   A_RAINBOW,
   A_GLITTER,
@@ -41,6 +42,18 @@ enum animation_t {
   
   N_ANIMATIONS
 };
+
+/*
+LED Colors:
+red
+orange
+yellow
+green
+aqua
+blue
+purple
+pink
+*/
 
 class Animation {
   public:
@@ -56,8 +69,11 @@ class Animation {
     // sets the animation 
     void startAnimation(byte animation=A_STABLE, boolean clearStrip=true); 
     // sets the hue start and increment for animation
-    void startHue(byte hue=0);
-    void incrementHue(int inc=1);
+    void startHue(byte hue=160); // default blue
+    void hueIncrement(int inc=1);
+    void hueTarget(byte hue=160);
+    // moves hueVal to targetHue by hueInc
+    void stepHue();
     // sets the led start and increment for animation
     void startPosition(byte pos=0);
     void incrementPosition(int inc=1);
@@ -67,15 +83,16 @@ class Animation {
     void setActivity(fract8 chance=80);
     
     // runs the animation
-    void runAnimation();
+    void update();
     
   private:
-    byte anim, hueVal, posVal;   
+    byte anim, hueVal, targetHue, targetBright, posVal;   
     int hueInc, posInc;
     fract8 chanceAct;
     
     Metro pushNextFrame;
     
+    void aPulse();
     void aStable();
     void aSolid();
     void aRainbow();

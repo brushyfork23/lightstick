@@ -42,7 +42,8 @@ void Radio::update() {
     // update Payload object
     payload = *(Payload*)radio.DATA; //assume radio.DATA actually contains our struct and not something else
     this->pgm = payload.pgm;
-    this->num = payload.num;
+    this->hue = payload.hue;
+    this->bright = payload.bright;
     this->hasUnorocessedPayload = true;
   }
 }
@@ -51,18 +52,11 @@ void Radio::sendAck() {
   radio.sendACK();
 }
 
-void Radio::sendProgram(byte pgm) {
-  payload.pgm = pgm;
-  sendPayload(payload);
-}
-
-void Radio::sendVal(byte val) {
-  payload.num = val;
-  sendPayload(payload);
-}
-
-void Radio::sendPayload(Payload payload) {
-  Serial << F("Sending struct (") << sizeof(payload) << F(" bytes) ... ") << endl;
+void Radio::sendPayload() {
+  payload.pgm = this->pgm;
+  payload.bright = this->bright;
+  payload.hue = this->hue;
+  //Serial << F("Sending struct (") << sizeof(payload) << F(" bytes) ... ") << endl;
   radio.send(BROADCAST, (const void*)(&payload), sizeof(Payload));
 }
 

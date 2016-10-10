@@ -18,50 +18,62 @@
 enum
 {
   // Commands
-  kManual=0      ,
-  kAudio       , 
-  kDelayTest   ,
+  kAudio=0     ,
+  kColorFast   ,
+  kColorSlow   ,
 };
 
-// Establish My NodeId
+byte program=kAudio;
 
-// set Metro pushNextFrame for tracking time between frames
-// and set bool nextFrameReady 
+// Stick is in pulse state when no radio activity is detected.  This way if connectivity is lost, the stick does not freeze.
+// Transition from react to pulse when radio has been inactive for a set length of time.
+// Transition from pulse to react when a radio packet is received.
+// pulse <-> react
+/*
+State pulse = State(pulseEnter, pulseUpdate, pulseExit);
 
-// if radio input available
-//  record payload: https://github.com/LowPowerLab/RFM69/blob/master/Examples/Struct_receive/Struct_receive.ino#L95
-//  if Payload.pgm != pgm
-//     setProgram(pgm)
-//  switch on pgm
-//    case DELAY_TEST
-//      increment hue value
-//      set strip color to hue value
-//      send ack
-//    case MANUAL
-//      convert Payload.num to hue value
-//      set strip color to hue value
-//    case AUDIO
-//      convert Payload.num to brightness
-//      set strip brightness
+FSM lightstick = FSM(pulse); //initialize state machine, start in state: pulse
 
-// Render next frame of animation: A.runAnimation()
+//***** Pulse
+void pulseEnter() {
+  Serial << F("LightStick: ->pulse") << endl;
 
-// light strip
+  // Set target color and brightness
+  A.targetHue(160); // blue
 
-//  setProgram(pgm) {
-//    init(pgm)
+  // Set animation to pulse
+  A.startAnimation(A_Pulse, false);
+}
+void pulseUpdate() {
+  A.update();
+  light.animate(A_Idle);
+  // check buttons for game play start
+  if ( touch.anyButtonPressed() ) {
+    // going to start a game
+    Serial << F("LightStick: pulse->audio") << endl;
 
-//  init(pgm) {
-//    switch on pgm
-//    case DELAY_TEST
-//      set hueVal = 0
-//    case MANUAL
-//      set hueVal = 0
-//    case AUDIO
-//      set brightness = 0
+    sound.stopAll();
+    sound.setLeveling(1, 1); // 1x tone and 1x track
+    //rockTrack = sound.playRock(501);
 
-byte program=kManual;
-int16_t hueVal;
+    // let's play a game
+    simon.transitionTo(game);
+  } else if ( idleBeforeFanfare.check() ) {
+
+    // do some fanfare
+    fanfareLevel = IDLE;
+    simon.transitionTo(fanfare);
+  } else if ( sensor.modeChange() ) {
+    // run tests
+    simon.transitionTo(test);
+  }
+
+  scoreboard.showBackerMessages();
+  scoreboard.showSimonTeam();
+}
+void pulseExit() {
+}
+*/
 
 void setup() {
   delay(500); // delay for upload
@@ -73,6 +85,8 @@ void setup() {
 
   // startup animation
   A.begin();
+
+  //lightstick.update();
 }
 
 
@@ -85,42 +99,26 @@ void loop() {
     Serial << F("Unprocessed Payload: ");
     program = R.pgm;
     switch(program) {
-      case kManual:
-        Serial << F("Manual") << endl;
-        hueVal = 0;
-        break;
       case kAudio:
         Serial << F("Audio") << endl;
-        A.setMasterBrightness(0);
         break;
-      case kDelayTest:
-        Serial << F("Delay Test") << endl;
+      case kColorFast:
+        Serial << F("Fast Color Change") << endl;
+        A.hueIncrement(20);
+        break;
+      case kColorSlow:
+        Serial << F("Slow Color Change") << endl;
+        A.hueIncrement(1);
         break;
     }
   }
 
-  switch (program) {
-    case kManual:
-      if (R.hasUnorocessedPayload) {
-        Serial << F("Received manual Hue: ") << R.num << endl;
-        A.startHue(R.num);
-      }
-      break;
-    case kAudio:
-      if (R.hasUnorocessedPayload) {
-        Serial << F("Received audio vol: ") << R.num << endl;
-        A.setMasterBrightness(R.num);
-      }
-      break;
-    case kDelayTest:
-      if (R.hasUnorocessedPayload) {
-        A.incrementHue(1);
-        R.sendAck();
-      }
-      break;
+  if (R.hasUnorocessedPayload) {
+    A.hueTarget(R.hue);
+    A.setMasterBrightness(R.bright);
   }
   
-  A.runAnimation();
+  A.update();
 
   R.hasUnorocessedPayload = false;
 }

@@ -18,7 +18,7 @@ void Animation::begin() {
   this->startAnimation();
 
   this->startHue();
-  this->incrementHue();  
+  this->hueIncrement();
 
   this->startPosition();
   this->incrementPosition();
@@ -54,9 +54,26 @@ void Animation::startHue(byte hue) {
   this->hueVal = hue;
   Serial << F("hue start=") << this->hueVal << endl;
 }
-void Animation::incrementHue(int inc) {
+void Animation::hueIncrement(int inc) {
   this->hueInc = inc;
   Serial << F("hue increment=") << this->hueInc << endl;
+}
+void Animation::hueTarget(byte hue) {
+  this->targetHue = hue;
+  Serial << F("hue target=") << this->targetHue << endl;
+}
+void Animation::stepHue() {
+  // Bring hueVal closer to targetHue
+  if (hueVal != targetHue) {
+    // set to target if increment would overshoot
+    if (abs(hueVal - targetHue) < hueInc) {
+      hueVal = targetHue;
+    } else if (hueVal < targetHue) {
+      hueVal += hueInc;
+    } else if (hueVal > targetHue) {
+      hueVal -= hueInc;
+    }
+  }
 }
 void Animation::startPosition(byte pos) {
   this->posVal = pos % NUM_LEDS;
@@ -78,12 +95,15 @@ void Animation::setActivity(fract8 chance) {
 }
 
 // runs the animation
-void Animation::runAnimation() {
+void Animation::update() {
 
   // pre-calculate the next frame
   static boolean nextFrameReady = false;
   if( ! nextFrameReady ) {
     switch( anim ) {
+    case A_PULSE: 
+      aPulse(); 
+      break;
     case A_STABLE: 
       aStable(); 
       break;
@@ -133,8 +153,14 @@ void Animation::runAnimation() {
 
 }
 
+// uses: hueVal, targetHue, hueInc, targetBright
+void Animation::aPulse() {
+  stepHue();
+}
+
 // uses: hueVal
 void Animation::aStable() {
+  stepHue();
   // FastLED's built-in solid fill (colorutils.h)
   fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, 255) );
 }

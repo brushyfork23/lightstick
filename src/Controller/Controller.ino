@@ -19,61 +19,25 @@
 //------ Input units.
 #include "Mic.h" // Microphone
 
-// Establish Control NodeId
-
-// define char inChar,
-//             pgm
-
-// if serial available
-//    record serial char as inChar
-//    if inChar == P
-//      log "Enter new program cmd (options: D = Delay Test, M = Manual, A = Audio)"
-//      wait for serial available
-//      record serial char as pgm
-//      switch pgm
-//        case D
-//          send NEW_PROGRAM cmd for DELAY_TEST
-//        case M
-//          send NEW_PROGRAM cmd for MANUAL
-//        case A
-//          send NEW_PROGRAM cmd for AUDIO
-
-// Switch on current program pgm
-// case D
-//    record time
-//    ping single node, requesting ack
-//    recieve ack; record time delta
-//    compute new average delta
-//    log average delta after modulo attempts
-// case M
-//    send inChar to all nodes in group
-//    wait pre-calculated transmission time
-// case A
-//    take analog reading
-//    compute new average amplitude
-//    send amplitude to all nodes in group
-//    wait pre-calculated transmission time
-
-
-
+#define INSTRUCTIONS "Commands: 0=Audio, 1=Color Fast, 2=Color Slow, 3=Set Color, 4=Hard On, 5=Drop Freq, 6=Raise Freq, 7=Drop Vol, 8=Raise Vol"
 enum
 {
   // Commands
-  kManual=0      ,
-  kAudio       , 
-  kDelayTest   ,
-  kDropFreq,
-  kRaiseFreq,
-  kDropVol,
-  kRaiseVol,
+  kAudio=0     ,
+  kColorFast   ,
+  kColorSlow   ,
+  kSetColor    ,
+  kHardOn      ,
+  kDropFreq    ,
+  kRaiseFreq   ,
+  kDropVol     ,
+  kRaiseVol    ,
 };
 
 // Attach a new CmdMessenger object to the default Serial port
 //CmdMessenger cmdMessenger = CmdMessenger(Serial);
 
-bool hasNewInput = false;
-byte pgm=kAudio,
-     inVal;
+byte inVal;
 
 uint8_t triggerBand = 4; // audio band to monitor volume on
 uint16_t squash = 100;  // volume to subtract.  Dynamically drop when lights are too bright or never go completely dark.
@@ -93,26 +57,27 @@ int
   vol[SAMPLES],                                               // Collection of prior volume samples
   lvl       = 10,                                             // Current "dampened" audio level
   minLvlAvg = 0,                                              // For dynamic adjustment of graph low & high
-  maxLvlAvg = 1023,
-  amplitude = 0;                                              // Current amplitude value
-  int highest = 0;
+  maxLvlAvg = 1023;
+
+boolean waitingForColor = false;
+
+uint8_t amplitude = 0;                                        // Current intensity of audio
 
 /*void attachCommandCallbacks()
 {
   // Attach callback methods
   cmdMessenger.attach(OnUnknownCommand);
-  cmdMessenger.attach(kManual, OnManualCmd);
+  cmdMessenger.attach(kColorFast, OnSetColorCmd);
   cmdMessenger.attach(kAudio, OnAudioCmd);
-  cmdMessenger.attach(kDelayTest, OnDelayCmd);
 }
 // ------------------  C A L L B A C K S -----------------------
 
 // Called when a received command has no attached function
 void OnUnknownCommand()
 {
-  Serial << F("Changing program to: Manual") << endl;
+  Serial << F("Changing program to: Set Audio") << endl;
 
-  byte pgm=kManual;
+  byte pgm=kAudio;
 
   R.sendProgram(pgm);
 
@@ -130,21 +95,11 @@ void OnAudioCmd()
 }
 
 // Callback function calculates the sum of the two received float values
-void OnDelayCmd()
+void OnSetColorCmd()
 {
-  Serial << F("Changing program to: Delay Test") << endl;
+  Serial << F("Changing program to: Set Color") << endl;
 
-  byte pgm=kDelayTest;
-
-  R.sendProgram(pgm);
-}
-
-// Callback function calculates the sum of the two received float values
-void OnManualCmd()
-{
-  Serial << F("Changing program to: Manual") << endl;
-
-  byte pgm=kManual;
+  byte pgm=kColorFast;
 
   R.sendProgram(pgm);
 
@@ -171,10 +126,13 @@ void setup() {
   // Establish Control NodeId and start radio
   R.begin(CONTROLLER_NODE);
  
+  R.pgm = kAudio;
+  R.bright = 100;
   // Attach my application's user-defined callback methods
 //  attachCommandCallbacks();
 
   Serial.println("Start Controller...");
+  printInstructions();
 }
 
 void loop() {
@@ -184,65 +142,67 @@ void loop() {
   if( Serial.available() > 0 ) {
     inVal = Serial.parseInt();
     Serial << F("Reading new value: ") << inVal << endl;
-    hasNewInput = true;
-    switch(inVal) {
-      case kManual:
-        if (!pgm == kManual) {
-          Serial << F("Changing program to: Manual") << endl;
-          
-          pgm=kManual;
-  
-          R.sendProgram(pgm);
-          
-          hasNewInput = false;
-        }
-        break;
-      case kAudio:
-        Serial << F("Changing program to: Audio") << endl;
+    if (waitingForColor) {
+      R.hue = Serial.parseInt();
+      waitingForColor = false;
+    } else {
+      switch(inVal) {
+        case kAudio:
+          Serial << F("Changing program to: Audio") << endl;
 
-        pgm=kAudio;
-      
-        R.sendProgram(pgm);
-        break;
-      case kDelayTest:
-        Serial << F("Changing program to: Delay Test") << endl;
+          R.pgm = kAudio;
+          break;
+        case kColorFast:
+          if (!R.pgm == kColorFast) {
+            Serial << F("Changing program to: Fast Color Change") << endl;
+            
+            R.pgm = kColorFast;
+          }
+          break;
+        case kColorSlow:
+          if (!R.pgm == kColorSlow) {
+            Serial << F("Changing program to: Slow Color Change") << endl;
+            
+            R.pgm=kColorSlow;
+          }
+          break;
+        case kSetColor:
+          Serial << F("Enter new color value (0 - 255):") << endl;
+          waitingForColor = true;
+          break;
+        case kHardOn:
+          Serial << F("Setting brightness hard on.") << endl;
 
-        pgm=kDelayTest;
-      
-        R.sendProgram(pgm);
-        break;
-      case kDropFreq:
-        if (triggerBand > 0) {
-          triggerBand = triggerBand - 1;
-          Serial << F("Dropping trigger band to: ") << triggerBand << endl;
-        } else {
-          Serial << F("Trigger band at floor") << endl;
-        }
-        break;
-      case kRaiseFreq:
-        if (triggerBand < 6) {
-          triggerBand = triggerBand + 1;
-          Serial << F("Raising trigger band to: ") << triggerBand << endl;
-        } else {
-          Serial << F("Trigger band at ceiling") << endl;
-        }
-        break;
-      case kDropVol:
-        if (squash < 1003) {
-          squash = squash + 20;
-          Serial << F("Raising squash to: ") << squash << endl;
-        } else {
-          Serial << F("Squash at ceiling") << endl;
-        }
-        break;
-      case kRaiseVol:
-        if (squash < 21) {
-          squash = squash - 20;
-          Serial << F("Dropping squash to: ") << squash << endl;
-        } else {
-          Serial << F("Squash at floor") << endl;
-        }
-        break;
+          R.pgm=kHardOn;
+
+          R.bright = 100;
+          break;
+        case kRaiseFreq:
+          if (triggerBand < 6) {
+            triggerBand = triggerBand + 1;
+            Serial << F("Raising trigger band to: ") << triggerBand << endl;
+          } else {
+            Serial << F("Trigger band at ceiling") << endl;
+          }
+          break;
+        case kDropVol:
+          if (squash < 1003) {
+            squash = squash + 20;
+            Serial << F("Raising squash to: ") << squash << endl;
+          } else {
+            Serial << F("Squash at ceiling") << endl;
+          }
+          break;
+        case kRaiseVol:
+          if (squash < 21) {
+            squash = squash - 20;
+            Serial << F("Dropping squash to: ") << squash << endl;
+          } else {
+            Serial << F("Squash at floor") << endl;
+          }
+          break;
+      }
+      printInstructions();
     }
   }
   
@@ -269,27 +229,13 @@ void loop() {
   }
   */
 
-  switch(pgm) {
-    case kDelayTest:
-      break;
-    case kManual:
-      if (hasNewInput) {
-        Serial << F("Sending manual value: ") << inVal << endl;
-        R.sendVal(inVal);
-        hasNewInput = false;
-      }
-      break;
+  switch(R.pgm) {
     case kAudio:
       updateAmplitude();
-      /*
-      listenLine.update();   // populate avg
-      int amplitude = listenLine.getAvg(TRIGGER_BAND);
-      amplitude = massageVol(amplitude);
-      */
-      //Serial << F("Sending avg vol: ") << amplitude << endl;
-      R.sendVal(amplitude);
       break;
   }
+
+  R.sendPayload();
 }
 
 void updateAmplitude() {
@@ -336,3 +282,6 @@ void updateAmplitude() {
   maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6;                 // (fake rolling average)
 }
 
+void printInstructions() {
+  Serial << F(INSTRUCTIONS) << endl;
+}
