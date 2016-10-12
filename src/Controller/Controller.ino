@@ -16,16 +16,11 @@
 //------ Input units.
 #include "Mic.h" // Microphone
 
-#define INSTRUCTIONS "Commands: 0=Audio, 1=Color Fast, 2=Color Slow, 3=Set Color, 4=Hard On, 5=Drop Freq, 6=Raise Freq, 7=Drop Vol, 8=Raise Vol"
+#define INSTRUCTIONS "Commands: 1=Drop Freq, 2=Raise Freq, 3=Drop Vol, 4=Raise Vol"
 enum
 {
   // Commands
-  kAudio=0     ,
-  kColorFast   ,
-  kColorSlow   ,
-  kSetColor    ,
-  kHardOn      ,
-  kDropFreq    ,
+  kDropFreq=1  ,
   kRaiseFreq   ,
   kDropVol     ,
   kRaiseVol    ,
@@ -55,6 +50,8 @@ int
 
 boolean waitingForColor = false;
 
+boolean cmdMode = false;
+
 uint8_t amplitude = 0;                                        // Current intensity of audio
 
 void setup() {
@@ -68,7 +65,7 @@ void setup() {
   // Establish Control NodeId and start radio
   R.begin(CONTROLLER_NODE);
  
-  R.pgm = kAudio;
+  R.hue = 160;
   R.bright = 100;
 
   Serial.println("Start Controller...");
@@ -79,60 +76,44 @@ void loop() {
   if( Serial.available() > 0 ) {
     inVal = Serial.parseInt();
     Serial << F("Reading new value: ") << inVal << endl;
-    if (waitingForColor) {
-      R.hue = inVal;
-      waitingForColor = false;
-    } else {
+    if (inVal == 0) {
+      cmdMode = !cmdMode;
+      if (cmdMode) {
+        Serial << F("Entering command mode.") << endl;
+        printInstructions();
+      } else {
+        Serial << F("Entering color mode.  Enter new color value (1 - 255):") << endl;
+      }
+    }
+    if (cmdMode) {
       switch(inVal) {
-        case kAudio:
-          Serial << F("Changing program to: Audio") << endl;
-
-          R.pgm = kAudio;
-          break;
-        case kColorFast:
-          if (!R.pgm == kColorFast) {
-            Serial << F("Changing program to: Fast Color Change") << endl;
-            
-            R.pgm = kColorFast;
+        case kDropFreq:
+          if (triggerBand > 0) {
+            triggerBand--;
+            Serial << F("Dropping trigger band to: ") << triggerBand << endl;
+          } else {
+            Serial << F("Trigger band at floor") << endl;
           }
-          break;
-        case kColorSlow:
-          if (!R.pgm == kColorSlow) {
-            Serial << F("Changing program to: Slow Color Change") << endl;
-            
-            R.pgm=kColorSlow;
-          }
-          break;
-        case kSetColor:
-          Serial << F("Enter new color value (0 - 255):") << endl;
-          waitingForColor = true;
-          break;
-        case kHardOn:
-          Serial << F("Setting brightness hard on.") << endl;
-
-          R.pgm=kHardOn;
-
-          R.bright = 100;
           break;
         case kRaiseFreq:
           if (triggerBand < 6) {
-            triggerBand = triggerBand + 1;
+            triggerBand++;
             Serial << F("Raising trigger band to: ") << triggerBand << endl;
           } else {
             Serial << F("Trigger band at ceiling") << endl;
           }
           break;
         case kDropVol:
-          if (squash < 1003) {
-            squash = squash + 20;
+          if (squash < 975) {
+            squash = squash + 50;
             Serial << F("Raising squash to: ") << squash << endl;
           } else {
             Serial << F("Squash at ceiling") << endl;
           }
           break;
         case kRaiseVol:
-          if (squash < 21) {
-            squash = squash - 20;
+          if (squash >= 50) {
+            squash = squash - 50;
             Serial << F("Dropping squash to: ") << squash << endl;
           } else {
             Serial << F("Squash at floor") << endl;
@@ -140,14 +121,15 @@ void loop() {
           break;
       }
       printInstructions();
+    } else {
+      R.hue = inVal;
+      Serial << F("Setting hue: ") << inVal << endl;
+      Serial << F("Enter new color value (1 - 255):") << endl;
     }
   }
 
-  switch(R.pgm) {
-    case kAudio:
-      updateAmplitude();
-      break;
-  }
+  updateAmplitude();
+  R.bright = amplitude;
 
   R.sendPayload();
 }

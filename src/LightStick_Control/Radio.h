@@ -26,7 +26,6 @@
 #define FLASH_ID  0xEF30 // EF30 for windbond 4mbit flash
 
 typedef struct {
-  char          pgm;    // program to execute
   uint8_t       hue;    // target color
   uint8_t       bright; // brightness intensity
 } Payload;
@@ -40,7 +39,6 @@ class Radio {
     void sendPayload();
     // return my node ID
     byte myNodeID; // 26-28 for Lights
-    char pgm;
     uint8_t hue, bright;
     bool hasUnorocessedPayload;
 

@@ -14,9 +14,9 @@
 
 #define HUE_START      160
 
-#define BRIGHT_START   255
-#define BRIGHT_LOW     60
-#define BRIGHT_HIGH    150
+#define BRIGHT_LOW     5
+#define BRIGHT_HIGH    110
+#define BRIGHT_START   BRIGHT_LOW
 
 #include <Metro.h>
 #include <FastLED.h>
@@ -81,7 +81,7 @@ class Animation {
     void startAnimation(byte animation=A_STABLE, boolean clearStrip=true); 
     // sets the hue start and increment for animation
     void hueSet(byte hue=HUE_START); // default blue
-    void hueIncrement(int inc=1);
+    void hueIncrement(int inc=6);
     void hueTarget(byte hue=HUE_START);
     // moves hueVal to targetHue by hueInc
     void hueStep();

@@ -15,16 +15,6 @@
 
 #include "Animations.h"
 
-enum
-{
-  // Commands
-  kAudio=0     ,
-  kColorFast   ,
-  kColorSlow   ,
-};
-
-byte program=kAudio;
-
 // Stick is in pulse state when no radio activity is detected.  This way if connectivity is lost, the stick does not freeze.
 // Transition from react to pulse when radio has been inactive for a set length of time.
 // Transition from pulse to react when a radio packet is received.
@@ -83,17 +73,19 @@ State audio = State(audioEnter, audioUpdate, audioExit);
 
 State pulse = State(pulseEnter, pulseUpdate, pulseExit);
 
-FSM lightstick = FSM(pulse); //initialize state machine, start in state: audio
+FSM lightstick = FSM(audio); //initialize state machine, start in state: audio
 
 // Ensure a stable radio connection before transitioning to audio state
-Metro radioStable(200UL);
+Metro radioStable(1000UL);
 
 // If radio contact is lost, transition to a non-radio-dependent state
-Metro radioTimeout(200UL);
+Metro radioTimeout(2000UL);
 
 //***** Audio Reactive
 void audioEnter() {
   Serial << F("LightStick: ->audio") << endl;
+  A.startAnimation(A_STABLE, false);
+  radioTimeout.reset();
 }
 void audioUpdate() {
   A.update();
@@ -106,25 +98,9 @@ void audioUpdate() {
 
     A.hueTarget(R.hue);
     A.brightnessSet(R.bright);
-
-    // check for new directive
-    if (R.pgm != program) {
-      program = R.pgm;
-      switch(program) {
-        case kColorFast:
-          Serial << F("Fast Color Change") << endl;
-          A.hueIncrement(20);
-          break;
-        case kColorSlow:
-          Serial << F("Slow Color Change") << endl;
-          A.hueIncrement(1);
-          break;
-      }
-    }
   } else {
     // if it has been too long since last communication, transition to pulse state
     if (radioTimeout.check()) {
-      radioStable.reset();
       Serial << F("Lost radio contact.") << endl;
       lightstick.transitionTo(pulse);
     }
@@ -138,11 +114,14 @@ void pulseEnter() {
   Serial << F("LightStick: ->pulse") << endl;
 
   // Setup for quick transition to dim brightness
-  A.brightnessTarget(BRIGHT_LOW);
-  A.brightnessInc(10);
+  A.brightnessTarget(BRIGHT_HIGH);
+  A.brightnessSet(BRIGHT_LOW);
+  A.brightnessInc(3);
 
   // Set animation to pulse but do not clear current settings
   A.startAnimation(A_PULSE, false);
+  
+  radioStable.reset();
 }
 void pulseUpdate() {
   A.update();
@@ -151,15 +130,16 @@ void pulseUpdate() {
   // check radio for new transmission
   if (R.hasUnorocessedPayload ) {
     R.hasUnorocessedPayload = false;
-
+    radioTimeout.reset();
     // ensure connection is stable
     if (radioStable.check()) {
-      radioTimeout.reset();
       Serial << F("Sustained radio contact aquired.") << endl;
       lightstick.transitionTo(audio);
     }
   } else {
-    radioStable.reset();
+    if (radioTimeout.check()) {
+      radioStable.reset();
+    }
   }
 }
 void pulseExit() {
@@ -180,38 +160,6 @@ void setup() {
 
 void loop() {
   lightstick.update();
-  /*
-  // if availalbe, record a new radio payload
-  R.update();
-
-  // Update program if new
-  if (R.hasUnorocessedPayload && R.pgm != program) {
-    Serial << F("Unprocessed Payload: ");
-    program = R.pgm;
-    switch(program) {
-      case kAudio:
-        Serial << F("Audio") << endl;
-        break;
-      case kColorFast:
-        Serial << F("Fast Color Change") << endl;
-        A.hueIncrement(20);
-        break;
-      case kColorSlow:
-        Serial << F("Slow Color Change") << endl;
-        A.hueIncrement(1);
-        break;
-    }
-  }
-
-  if (R.hasUnorocessedPayload) {
-    A.hueTarget(R.hue);
-    A.setMasterBrightness(R.bright);
-  }
-  
-  A.update();
-
-  R.hasUnorocessedPayload = false;
-  */
 }
 
 

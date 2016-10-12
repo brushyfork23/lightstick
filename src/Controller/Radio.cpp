@@ -41,7 +41,6 @@ void Radio::update() {
   if (radio.receiveDone() && radio.DATALEN == sizeof(Payload)) {
     // update Payload object
     payload = *(Payload*)radio.DATA; //assume radio.DATA actually contains our struct and not something else
-    this->pgm = payload.pgm;
     this->hue = payload.hue;
     this->bright = payload.bright;
     this->hasUnorocessedPayload = true;
@@ -53,7 +52,6 @@ void Radio::sendAck() {
 }
 
 void Radio::sendPayload() {
-  payload.pgm = this->pgm;
   payload.bright = this->bright;
   payload.hue = this->hue;
   //Serial << F("Sending struct (") << sizeof(payload) << F(" bytes) ... ") << endl;

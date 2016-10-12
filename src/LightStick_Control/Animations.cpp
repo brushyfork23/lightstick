@@ -185,15 +185,18 @@ void Animation::aPulse() {
 
   hueStep();
   brightnessStep();
-
-  FastLED.setBrightness(this->brightVal); 
+  brightnessSet(this->brightVal);
+  fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, 255) );
+  //fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, this->brightVal) );
 }
 
 // uses: hueVal
 void Animation::aStable() {
   hueStep();
   // FastLED's built-in solid fill (colorutils.h)
+  brightnessSet(this->brightVal);
   fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, 255) );
+  //fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, this->brightVal) );
 }
 
 // uses: hueVal, hueInc
