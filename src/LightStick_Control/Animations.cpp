@@ -13,11 +13,11 @@ void Animation::begin() {
   FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
 
   this->setFPS();
-  this->setMasterBrightness();
+  this->brightnessSet();
 
   this->startAnimation();
 
-  this->startHue();
+  this->hueSet();
   this->hueIncrement();
 
   this->startPosition();
@@ -36,10 +36,32 @@ void Animation::setFPS(uint16_t framesPerSecond) {
 }
 
 // sets master brightness
-void Animation::setMasterBrightness(byte masterBrightness) {
+void Animation::brightnessSet(byte brightness) {
   // set master brightness control
-  FastLED.setBrightness(masterBrightness); 
-  Serial << F("Master brightness= ") << masterBrightness << endl;
+  this->brightVal = brightness;
+  FastLED.setBrightness(brightness); 
+  Serial << F("Brightness set= ") << brightness << endl;
+}
+void Animation::brightnessInc(uint8_t inc) {
+  this->brightInc = inc;
+  Serial << F("Brightness increment=") << this->brightInc << endl;
+}
+void Animation::brightnessTarget(byte brightness) {
+  this->targetBright = brightness;
+  Serial << F("Brightness target=") << this->targetBright << endl;
+}
+void Animation::brightnessStep() {
+  // Bring brightVal closer to targetBright
+  if (this->brightVal != this->targetBright) {
+    // set to target if increment would overshoot
+    if (abs(this->brightVal - this->targetBright) < this->brightInc) {
+      this->brightVal = this->targetBright;
+    } else if (this->brightVal < this->targetBright) {
+      this->brightVal += this->brightInc;
+    } else if (this->brightVal > this->targetBright) {
+      this->brightVal -= this->brightInc;
+    }
+  }
 }
 
 // sets the animation 
@@ -50,9 +72,9 @@ void Animation::startAnimation(byte animation, boolean clearStrip) {
   Serial << F("animation=") << this->anim << endl;
 
 }
-void Animation::startHue(byte hue) {
+void Animation::hueSet(byte hue) {
   this->hueVal = hue;
-  Serial << F("hue start=") << this->hueVal << endl;
+  Serial << F("hue set=") << this->hueVal << endl;
 }
 void Animation::hueIncrement(int inc) {
   this->hueInc = inc;
@@ -62,16 +84,16 @@ void Animation::hueTarget(byte hue) {
   this->targetHue = hue;
   Serial << F("hue target=") << this->targetHue << endl;
 }
-void Animation::stepHue() {
+void Animation::hueStep() {
   // Bring hueVal closer to targetHue
-  if (hueVal != targetHue) {
+  if (this->hueVal != this->targetHue) {
     // set to target if increment would overshoot
-    if (abs(hueVal - targetHue) < hueInc) {
-      hueVal = targetHue;
-    } else if (hueVal < targetHue) {
-      hueVal += hueInc;
-    } else if (hueVal > targetHue) {
-      hueVal -= hueInc;
+    if (abs(this->hueVal - this->targetHue) < this->hueInc) {
+      this->hueVal = this->targetHue;
+    } else if (this->hueVal < this->targetHue) {
+      this->hueVal += this->hueInc;
+    } else if (this->hueVal > this->targetHue) {
+      this->hueVal -= this->hueInc;
     }
   }
 }
@@ -153,14 +175,23 @@ void Animation::update() {
 
 }
 
-// uses: hueVal, targetHue, hueInc, targetBright
+// uses: hueVal, targetHue, hueInc, brightVal, targetBright, brightInc
 void Animation::aPulse() {
-  stepHue();
+  if (this->brightVal == BRIGHT_LOW) {
+    brightnessTarget(BRIGHT_HIGH);
+  } else if (this->brightVal == BRIGHT_HIGH) {
+    brightnessTarget(BRIGHT_LOW);
+  }
+
+  hueStep();
+  brightnessStep();
+
+  FastLED.setBrightness(this->brightVal); 
 }
 
 // uses: hueVal
 void Animation::aStable() {
-  stepHue();
+  hueStep();
   // FastLED's built-in solid fill (colorutils.h)
   fill_solid( leds, NUM_LEDS, CHSV(hueVal, 255, 255) );
 }

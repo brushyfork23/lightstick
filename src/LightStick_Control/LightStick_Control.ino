@@ -75,6 +75,96 @@ void pulseExit() {
 }
 */
 
+/* Prototypes for state methods */
+void audioEnter(), audioUpdate(), audioExit();
+void pulseEnter(), pulseUpdate(), pulseExit();
+
+State audio = State(audioEnter, audioUpdate, audioExit);
+
+State pulse = State(pulseEnter, pulseUpdate, pulseExit);
+
+FSM lightstick = FSM(pulse); //initialize state machine, start in state: audio
+
+// Ensure a stable radio connection before transitioning to audio state
+Metro radioStable(200UL);
+
+// If radio contact is lost, transition to a non-radio-dependent state
+Metro radioTimeout(200UL);
+
+//***** Audio Reactive
+void audioEnter() {
+  Serial << F("LightStick: ->audio") << endl;
+}
+void audioUpdate() {
+  A.update();
+  R.update();
+
+  // check radio for new transmission
+  if (R.hasUnorocessedPayload ) {
+    R.hasUnorocessedPayload = false;
+    radioTimeout.reset();
+
+    A.hueTarget(R.hue);
+    A.brightnessSet(R.bright);
+
+    // check for new directive
+    if (R.pgm != program) {
+      program = R.pgm;
+      switch(program) {
+        case kColorFast:
+          Serial << F("Fast Color Change") << endl;
+          A.hueIncrement(20);
+          break;
+        case kColorSlow:
+          Serial << F("Slow Color Change") << endl;
+          A.hueIncrement(1);
+          break;
+      }
+    }
+  } else {
+    // if it has been too long since last communication, transition to pulse state
+    if (radioTimeout.check()) {
+      radioStable.reset();
+      Serial << F("Lost radio contact.") << endl;
+      lightstick.transitionTo(pulse);
+    }
+  }
+}
+void audioExit() {
+}
+
+//***** Pulse
+void pulseEnter() {
+  Serial << F("LightStick: ->pulse") << endl;
+
+  // Setup for quick transition to dim brightness
+  A.brightnessTarget(BRIGHT_LOW);
+  A.brightnessInc(10);
+
+  // Set animation to pulse but do not clear current settings
+  A.startAnimation(A_PULSE, false);
+}
+void pulseUpdate() {
+  A.update();
+  R.update();
+
+  // check radio for new transmission
+  if (R.hasUnorocessedPayload ) {
+    R.hasUnorocessedPayload = false;
+
+    // ensure connection is stable
+    if (radioStable.check()) {
+      radioTimeout.reset();
+      Serial << F("Sustained radio contact aquired.") << endl;
+      lightstick.transitionTo(audio);
+    }
+  } else {
+    radioStable.reset();
+  }
+}
+void pulseExit() {
+}
+
 void setup() {
   delay(500); // delay for upload
    
@@ -85,12 +175,12 @@ void setup() {
 
   // startup animation
   A.begin();
-
-  //lightstick.update();
 }
 
 
 void loop() {
+  lightstick.update();
+  /*
   // if availalbe, record a new radio payload
   R.update();
 
@@ -121,6 +211,7 @@ void loop() {
   A.update();
 
   R.hasUnorocessedPayload = false;
+  */
 }
 
 

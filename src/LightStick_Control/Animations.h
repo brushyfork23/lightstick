@@ -12,6 +12,12 @@
 #define NUM_STRIPS     2
 #define NUM_LEDS       110
 
+#define HUE_START      160
+
+#define BRIGHT_START   255
+#define BRIGHT_LOW     60
+#define BRIGHT_HIGH    150
+
 #include <Metro.h>
 #include <FastLED.h>
 
@@ -63,17 +69,22 @@ class Animation {
     // set frames per second
     void setFPS(uint16_t framesPerSecond=30);
     // set master brightness
-    void setMasterBrightness(byte masterBrightness=255);
-
+    void brightnessSet(byte brightness=BRIGHT_START);
+    // set brightness increment
+    void brightnessInc(uint8_t inc=1);
+    // set target brightness
+    void brightnessTarget(byte brightness=BRIGHT_START);
+    // moves brightVal to targetBright by brightInc
+    void brightnessStep();
     // animations control
     // sets the animation 
     void startAnimation(byte animation=A_STABLE, boolean clearStrip=true); 
     // sets the hue start and increment for animation
-    void startHue(byte hue=160); // default blue
+    void hueSet(byte hue=HUE_START); // default blue
     void hueIncrement(int inc=1);
-    void hueTarget(byte hue=160);
+    void hueTarget(byte hue=HUE_START);
     // moves hueVal to targetHue by hueInc
-    void stepHue();
+    void hueStep();
     // sets the led start and increment for animation
     void startPosition(byte pos=0);
     void incrementPosition(int inc=1);
@@ -86,8 +97,8 @@ class Animation {
     void update();
     
   private:
-    byte anim, hueVal, targetHue, targetBright, posVal;   
-    int hueInc, posInc;
+    byte anim, hueVal=HUE_START, targetHue=HUE_START, brightVal=BRIGHT_START, targetBright=BRIGHT_START, posVal;   
+    int hueInc, posInc, brightInc;
     fract8 chanceAct;
     
     Metro pushNextFrame;

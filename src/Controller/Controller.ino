@@ -1,6 +1,3 @@
-
-//#include <CmdMessenger.h> // Serial Console
-
 // Include libraries for serial, eeprom, and radio
 #include <Streaming.h>
 #include <Metro.h>
@@ -34,9 +31,6 @@ enum
   kRaiseVol    ,
 };
 
-// Attach a new CmdMessenger object to the default Serial port
-//CmdMessenger cmdMessenger = CmdMessenger(Serial);
-
 byte inVal;
 
 uint8_t triggerBand = 4; // audio band to monitor volume on
@@ -63,58 +57,6 @@ boolean waitingForColor = false;
 
 uint8_t amplitude = 0;                                        // Current intensity of audio
 
-/*void attachCommandCallbacks()
-{
-  // Attach callback methods
-  cmdMessenger.attach(OnUnknownCommand);
-  cmdMessenger.attach(kColorFast, OnSetColorCmd);
-  cmdMessenger.attach(kAudio, OnAudioCmd);
-}
-// ------------------  C A L L B A C K S -----------------------
-
-// Called when a received command has no attached function
-void OnUnknownCommand()
-{
-  Serial << F("Changing program to: Set Audio") << endl;
-
-  byte pgm=kAudio;
-
-  R.sendProgram(pgm);
-
-  recordNewInVal();
-}
-
-// Callback function that responds that Arduino is ready (has booted up)
-void OnAudioCmd()
-{
-  Serial << F("Changing program to: Audio") << endl;
-
-  byte pgm=kAudio;
-
-  R.sendProgram(pgm);
-}
-
-// Callback function calculates the sum of the two received float values
-void OnSetColorCmd()
-{
-  Serial << F("Changing program to: Set Color") << endl;
-
-  byte pgm=kColorFast;
-
-  R.sendProgram(pgm);
-
-  recordNewInVal();
-}
-
-void recordNewInVal() {
-  // Retreive first parameter as int
-  inVal = cmdMessenger.readInt16Arg();
-  hasNewInput = true;
-}
-*/
-
-// ------------------ M A I N  ----------------------
-
 void setup() {
   delay(500);
 
@@ -128,22 +70,17 @@ void setup() {
  
   R.pgm = kAudio;
   R.bright = 100;
-  // Attach my application's user-defined callback methods
-//  attachCommandCallbacks();
 
   Serial.println("Start Controller...");
   printInstructions();
 }
 
 void loop() {
-
-  //cmdMessenger.feedinSerialData();
-
   if( Serial.available() > 0 ) {
     inVal = Serial.parseInt();
     Serial << F("Reading new value: ") << inVal << endl;
     if (waitingForColor) {
-      R.hue = Serial.parseInt();
+      R.hue = inVal;
       waitingForColor = false;
     } else {
       switch(inVal) {
@@ -205,29 +142,6 @@ void loop() {
       printInstructions();
     }
   }
-  
-  /*
-  byte inputLen = 0;
-  if( Serial.available() > 0 ) {
-    inputLen = readSerialLine(input, 10, 64, 100); //readSerialLine(char* input, char endOfLineChar=10, byte maxLength=64, uint16_t timeout=1000);
-    Serial << F("Received input with len: ") << inputLen << endl;
-    hasNewInput = true;
-  }
-
-  if (inputLen > 0) {
-    String inStr = String(input);
-    Serial << F("Input: ") << inStr << endl;
-  }
-
-  if (inputLen == 2 && input[0] == 80) { // 80 = P
-    Serial << F("Changing program to: ") << input[1] << endl;
-    //Serial << F("Enter new program cmd (Options: D = Delay Test, M = Manual, A = Audio:") << endl;
-    //while( ! Serial.available() );
-    //pgm = Serial.read();
-    pgm = input[1];
-    R.sendProgram(input[1]);
-  }
-  */
 
   switch(R.pgm) {
     case kAudio:
@@ -241,11 +155,7 @@ void loop() {
 void updateAmplitude() {
   uint8_t  i;
   uint16_t minLvl, maxLvl;
-   
-  /*
-  int n = analogRead(MIC_PIN);                                    // Raw reading from mic
-  n = abs(n - 512 - DC_OFFSET);                               // Center on zero
-  */
+  
   listenLine.update();
   int n = listenLine.getVol(triggerBand);
   
