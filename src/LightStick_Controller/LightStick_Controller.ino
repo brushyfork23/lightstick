@@ -9,9 +9,8 @@
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
 
-//#include <FiniteStateMachine.h>
-
-#include "Radio.h"
+#include <Network.h>
+#include <Animation.h>
 
 //------ Input units.
 #include "Mic.h" // Microphone
@@ -32,7 +31,7 @@ uint8_t triggerBand = 4; // audio band to monitor volume on
 uint16_t squash = 100;  // volume to subtract.  Dynamically drop when lights are too bright or never go completely dark.
 
 #define SAMPLES   60                                          // Length of buffer for dynamic level adjustment
-#define TOP       1023                                         // Allow peak to be slightly off scale
+#define TOP       110                                         // Allow peak to be slightly off scale
 
 #define DELAYED_FALL false                                    // Toggle delayed height falling
 #define FALL_RATE 20                                          // Rate height falling
@@ -63,10 +62,11 @@ void setup() {
   listenLine.begin(MIC_RESET_PIN, MIC_STROBE_PIN, MIC_OUT_PIN); // only listens to line in
   
   // Establish Control NodeId and start radio
-  R.begin(CONTROLLER_NODE);
+  N.begin(AUDIO_NODE);
  
-  R.hue = 160;
-  R.bright = 100;
+  N.animation = A_CLEAR;
+  N.input = 160;
+  N.volume = 100;
 
   Serial.println("Start Controller...");
   printInstructions();
@@ -104,16 +104,16 @@ void loop() {
           }
           break;
         case kDropVol:
-          if (squash < 975) {
-            squash = squash + 50;
+          if (squash < 1000) {
+            squash = squash + 25;
             Serial << F("Raising squash to: ") << squash << endl;
           } else {
             Serial << F("Squash at ceiling") << endl;
           }
           break;
         case kRaiseVol:
-          if (squash >= 50) {
-            squash = squash - 50;
+          if (squash >= 25) {
+            squash = squash - 25;
             Serial << F("Dropping squash to: ") << squash << endl;
           } else {
             Serial << F("Squash at floor") << endl;
@@ -122,16 +122,17 @@ void loop() {
       }
       printInstructions();
     } else {
-      R.hue = inVal;
-      Serial << F("Setting hue: ") << inVal << endl;
+      N.color = inVal;
+      Serial << F("Setting color: ") << inVal << endl;
       Serial << F("Enter new color value (1 - 255):") << endl;
     }
   }
 
   updateAmplitude();
-  R.bright = amplitude;
+  N.volume = amplitude;
 
-  R.sendPayload();
+  N.encodeMessage();
+  N.broadcastMessage();
 }
 
 void updateAmplitude() {
@@ -140,13 +141,13 @@ void updateAmplitude() {
   
   listenLine.update();
   int n = listenLine.getVol(triggerBand);
-  
+  //Serial << F("line in: ") << n << endl;
   n = (n <= squash) ? 0 : (n - squash);                         // Remove noise/hum
   lvl = ((lvl * 7) + n) >> 3;                                 // "Dampened" reading (else looks twitchy)
 
   // Calculate bar height based on dynamic min/max levels (fixed point):
-  //amplitude = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
-  amplitude = map(lvl, 0, TOP, 0, 255); 
+  amplitude = TOP * (lvl - minLvlAvg) / (long)(maxLvlAvg - minLvlAvg);
+  //amplitude = map(lvl, 0, TOP, 0, 255); 
   //amplitude = map(lvl, minLvlAvg, maxLvlAvg, 0, 255); 
 
   //Serial << F("n, l, amp: ") << n << ", " << lvl << ", " << amplitude << endl;
@@ -169,7 +170,7 @@ void updateAmplitude() {
   // (e.g. at very low volume levels) the graph becomes super coarse
   // and 'jumpy'...so keep some minimum distance between them (this
   // also lets the graph go to zero when no sound is playing):
-  if((maxLvl - minLvl) < TOP) maxLvl = minLvl + TOP;
+  if((maxLvl - minLvl) <= TOP) maxLvl = minLvl + TOP;
   minLvlAvg = (minLvlAvg * 63 + minLvl) >> 6;                 // Dampen min/max levels
   maxLvlAvg = (maxLvlAvg * 63 + maxLvl) >> 6;                 // (fake rolling average)
 }

@@ -171,6 +171,17 @@ void Network::encodeMessage() {
 	
 }
 
+// broadcast message to all nodes
+void Network::broadcastMessage() {
+	// put check in to make sure we're not clobbering messages from other transceivers
+	update();
+
+	senderNodeID = myNodeID;
+
+	radio.send(BROADCAST, (const void*)(&message), sizeof(message));
+
+}
+
 void Network::sendMessage(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();

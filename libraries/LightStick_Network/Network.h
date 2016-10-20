@@ -77,6 +77,10 @@ class Network {
 	// translate instructions -> message
 	void encodeMessage();
 
+	// send message to all nodes
+	void broadcastMessage();
+
+	// send message to one node
 	void sendMessage(byte toNodeID);
 
 	void sendState(byte toNodeID=BROADCAST);

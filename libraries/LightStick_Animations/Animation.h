@@ -12,7 +12,7 @@
 #define NUM_STRIPS     2
 #define NUM_LEDS       110
 
-#define HUE_START      160
+#define COLOR_START      160
 
 #define BRIGHT_LOW     5
 #define BRIGHT_HIGH    110
@@ -44,7 +44,11 @@ enum animation_t {
   A_JUGGLE,
   A_WHITE,// really a test pattern for maximal ampere draw estimation
   A_FIRE, // simulated fire colors
+  A_CENTERFIRE, // fire that radiates from a center
   A_TESTPATTERN, // test pattern to see if the LEDs are ok
+  A_CLEAR,
+  A_RGB,
+  A_HUE,
   
   N_ANIMATIONS
 };
@@ -79,12 +83,12 @@ class Animation {
     // animations control
     // sets the animation 
     void startAnimation(byte animation=A_STABLE, boolean clearStrip=true); 
-    // sets the hue start and increment for animation
-    void hueSet(byte hue=HUE_START); // default blue
-    void hueIncrement(int inc=6);
-    void hueTarget(byte hue=HUE_START);
-    // moves hueVal to targetHue by hueInc
-    void hueStep();
+    // sets the color start and increment for animation
+    void colorSet(byte color=COLOR_START); // default blue
+    void colorIncrement(int inc=6);
+    void colorTarget(byte color=COLOR_START);
+    // moves colorVal to targetColor by colorInc
+    void colorStep();
     // sets the led start and increment for animation
     void startPosition(byte pos=0);
     void incrementPosition(int inc=1);
@@ -97,9 +101,12 @@ class Animation {
     void update();
     
   private:
-    byte anim, hueVal=HUE_START, targetHue=HUE_START, brightVal=BRIGHT_START, targetBright=BRIGHT_START, posVal;   
-    int hueInc, posInc, brightInc;
+    byte anim, colorVal=COLOR_START, targetColor=COLOR_START, brightVal=BRIGHT_START, targetBright=BRIGHT_START, posVal;   
+    int colorInc, posInc, brightInc;
     fract8 chanceAct;
+    
+    byte position, extent;
+    byte currentPosition, currentExtent;
     
     Metro pushNextFrame;
     
@@ -114,7 +121,11 @@ class Animation {
     void aJuggle();
     void aWhite();
     void aFire();
+    void aCenterFire(byte pos, byte extent);
     void aTestPattern();
+    void aClear();
+    void aRGB();
+    void aHue();
 };
 
 extern Animation A;
