@@ -176,6 +176,7 @@ void Network::broadcastMessage() {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
 
+	targetNodeID = BROADCAST;
 	senderNodeID = myNodeID;
 
 	radio.send(BROADCAST, (const void*)(&message), sizeof(message));

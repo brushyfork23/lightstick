@@ -16,10 +16,10 @@
 
 uint8_t anim = A_CLEAR;
 
-// Stick is in pulse state when no radio activity is detected.  This way if connectivity is lost, the stick does not freeze.
-// Transition from radio to pulse when radio has been inactive for a set length of time.
-// Transition from pulse to radio when a radio packet is received.
-// pulse <-> radio
+// Stick is in idle state when no radio activity is detected.  This way if connectivity is lost, the stick does not freeze.
+// Transition from radio to idle when radio has been inactive for a set length of time.
+// Transition from idle to radio when a few radio packets have been received.
+// idle <-> radio
 
 /* Prototypes for state methods */
 void radioEnter(), radioUpdate(), radioExit();
@@ -44,7 +44,9 @@ void radioEnter() {
 }
 void radioUpdate() {
   // check Network for new radio message
-  if ( N.update() ) {
+  if ( N.update()
+    && N.targetNodeID == BROADCAST
+  ) {
     radioTimeout.reset();
     N.decodeMessage(); // decode the message to instructions
     switch (N.animation) {
@@ -81,7 +83,7 @@ void radioUpdate() {
     }
     anim = N.animation;
   } else {
-    // if it has been too long since last communication, transition to pulse state
+    // if it has been too long since last communication, transition to idle state
     if (radioTimeout.check()) {
       Serial << F("Lost radio contact.") << endl;
       lightstick.transitionTo(idle);

@@ -23,7 +23,9 @@
 
 #define PROGRAMMER_NODE		253 // nodeID of wireless programmer
 
-#define AUDIO_NODE			252 // nodeID of audio broadcaster
+#define CONTROLLER_NODE		252 // nodeID of controlloer which broadcasts new instructions
+
+#define AUDIO_NODE			251 // nodeID of audio broadcaster
 
 #define N_NODES				3
 
@@ -36,6 +38,16 @@ enum systemState {
 	
 	N_MODES 		// track mode count
 };
+
+// controller instructions
+enum controlInstructions {
+	M_RAISE_VOL=0,	// Raise volume broadcast value (by lowering audio squash)
+	M_LOWER_VOL,	// Lower volume broadcast value (by raising audio squash)
+	M_RAISE_FREQ,	// Raise trigger frequency band
+	M_LOWER_FREQ,	// Lower trigger frequency band
+
+	N_INSTRUCTIONS
+}
 
 // pin definitions common to Moteuinos
 #define LED		9 // Moteinos have LED on D9
