@@ -148,10 +148,10 @@ message == AAAAAAAAVVVVVVVVIIIIIIIISSSSSSSS
 */
 
 void Network::decodeMessage() {
-	this->s = this->message & 255UL; // dumping 30 MSB
-	this->input = (this->message >> 8) & 255UL; // dumping six MSB
-	this->volume = (this->message >> 16) & 255UL; // dumping six MSB
-	this->animation = (this->message >> 24) & 255UL; // dumping six MSB
+	this->s = this->message & 255UL;
+	this->input = (this->message >> 8) & 255UL;
+	this->volume = (this->message >> 16) & 255UL;
+	this->animation = (this->message >> 24) & 255UL;
 }
 
 void Network::encodeMessage() {

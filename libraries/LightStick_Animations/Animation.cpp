@@ -66,7 +66,7 @@ void Animation::brightnessStep() {
 
 // sets the animation 
 void Animation::startAnimation(byte animation, boolean clearStrip) {
-  this->anim = animation % N_ANIMATIONS;
+  this->anim = animation % (N_ANIMATIONS-1);
   if( clearStrip ) FastLED.clear();
 
   Serial << F("animation=") << this->anim << endl;

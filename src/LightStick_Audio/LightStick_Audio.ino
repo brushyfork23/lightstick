@@ -14,108 +14,102 @@
 #include <Network.h>
 #include <Animation.h>
 
-uint8_t anim = A_CLEAR;
+uint8_t curAnim = A_CLEAR;
 
-// Stick is in idle state when no radio activity is detected.  This way if connectivity is lost, the stick does not freeze.
-// Transition from radio to idle when radio has been inactive for a set length of time.
-// Transition from idle to radio when a few radio packets have been received.
-// idle <-> radio
+// Stick is in idle state when no audio node activity is detected.  This way if connectivity is lost, the stick does not freeze.
+// Transition from audio to idle when audio node has been inactive for a set length of time.
+// Transition from idle to audio when a few audio packets have been received.
+// idle <-> audio
 
 /* Prototypes for state methods */
-void radioEnter(), radioUpdate(), radioExit();
+void audioEnter(), audioUpdate(), audioExit();
 void idleEnter(), idleUpdate(), idleExit();
 
-State radio = State(radioEnter, radioUpdate, radioExit);
+State audio = State(audioEnter, audioUpdate, audioExit);
 
 State idle = State(idleEnter, idleUpdate, idleExit);
 
 FSM lightstick = FSM(idle); //initialize state machine, start in state: idle
 
-// Ensure a stable radio connection before transitioning to radio state
-Metro radioStable(250UL);
+// Ensure a stable audio connection before transitioning to audio state
+Metro audioStable(250UL);
 
-// If radio contact is lost, transition to a non-radio-dependent state
-Metro radioTimeout(1500UL);
+// If audio contact is lost, transition to a non-audio-dependent state
+Metro audioTimeout(1500UL);
 
-//***** Radio Controlled
-void radioEnter() {
-  Serial << F("LightStick: ->radio") << endl;
-  radioTimeout.reset();
+//***** Audio Controlled
+void audioEnter() {
+  Serial << F("LightStick: ->audio") << endl;
+  audioTimeout.reset();
 }
-void radioUpdate() {
+void audioUpdate() {
   // check Network for new radio message
-  if ( N.update()
-    && N.targetNodeID == BROADCAST
-  ) {
-    radioTimeout.reset();
-    N.decodeMessage(); // decode the message to instructions
-    switch (N.animation) {
-      case A_CENTERFIRE:
-        if (anim != N.animation) {
-          A.startAnimation(A_CENTERFIRE, true);
-          A.brightnessSet(255);
-        }
-        break;
-      case A_CLEAR:
-        A.startAnimation(A_CLEAR, true);
-        break;
-      case A_RGB:
-        if (anim != N.animation) {
-          A.startAnimation(A_RGB, true);
-        }
-        A.colorTarget(N.input);
-        A.brightnessSet(N.volume);
-        break;
-      case A_HUE:
-        if (anim != N.animation) {
-          A.startAnimation(A_HUE, true);
-        }
-        A.colorTarget(N.input);
-        A.brightnessSet(N.volume);
-        break;
-      default:
-        if (anim != N.animation) {
-          A.startAnimation(A_STABLE, true);
-        }
-        A.colorTarget(N.input);
-        A.brightnessSet(N.volume);
-        break;
-    }
-    anim = N.animation;
-  } else {
-    // if it has been too long since last communication, transition to idle state
-    if (radioTimeout.check()) {
-      Serial << F("Lost radio contact.") << endl;
+  bool radioUpdated = N.update();
+
+  // if it has been too long since last audio transmission, transition to idle state
+  if (!radioUpdated || N.senderNodeID != AUDIO_NODE) {
+    if (audioTimeout.check()) {
+      Serial << F("Lost audio contact.") << endl;
       lightstick.transitionTo(idle);
+    }
+  }
+
+  // handle new audio or animation instructions
+  if ( radioUpdated ) {
+    N.decodeMessage(); // decode the message to instructions
+
+    if (N.senderNodeID == AUDIO_NODE) {
+      audioTimeout.reset();
+
+      // Audio node sends volume; use to update brightness
+      switch (curAnim) {
+        case A_HUE:
+        case A_RGB:
+        case A_STABLE:
+          A.brightnessSet(N.volume);
+          break;
+      }
+    } else if (N.senderNodeID == CONTROLLER_NODE) {
+      handleControllerMessage(N.animation, N.input);
     }
   }
   
   A.update();
 }
-void radioExit() {
+void audioExit() {
 }
 
 //***** Idle
 void idleEnter() {
   Serial << F("LightStick: ->idle") << endl;
-  A.startAnimation(A_CLEAR, true);
-  A.update();
+  A.startAnimation(A_PULSE, true);
 
-  radioStable.reset();  
+  audioStable.reset();  
 }
 void idleUpdate() {
-  // check radio for new transmission
-  if ( N.update() ) {
-    radioTimeout.reset();
-    // ensure connection is stable
-    if (radioStable.check()) {
-      Serial << F("Sustained radio contact aquired.") << endl;
-      lightstick.transitionTo(radio);
+  A.update();
+
+  // check Network for new radio message
+  bool radioUpdated = N.update();
+
+  // when a audio packet is received, check that it is sustained
+  if (radioUpdated && N.senderNodeID == AUDIO_NODE) {
+    audioTimeout.reset(); // debouncer for stable audio
+    if (audioStable.check()) {
+      // audio transmissions are stable, transition to audio state
+      Serial << F("Sustained audio contact aquired.") << endl;
+      lightstick.transitionTo(audio);
     }
-  } else {
-    if (radioTimeout.check()) {
-      radioStable.reset();
-    }
+  }
+
+  if (radioUpdated && N.senderNodeID == CONTROLLER_NODE) {
+    N.decodeMessage();
+    handleControllerMessage(N.animation, N.input);
+  }
+
+  // consult the audio signal debouncer
+  if (audioTimeout.check()) {
+    audioStable.reset();
   }
 }
 void idleExit() { 
@@ -131,6 +125,29 @@ void setup() {
 
   // startup animation
   A.begin();
+}
+
+
+void handleControllerMessage(anim, input) {
+  // Controller node sends animation instructions; transition to new anim
+  switch (anim) {
+    case A_CENTERFIRE:
+      if (curAnim != A_CENTERFIRE) {
+        A.startAnimation(A_CENTERFIRE, true);
+        A.brightnessSet(255);
+      }
+      break;
+    case A_CLEAR:
+      A.startAnimation(A_CLEAR, true);
+      break;
+    default:
+      if (curAnim != anim) {
+        A.startAnimation(anim, true);
+      }
+      A.colorTarget(input);
+      break;
+  }
+  curAnim = N.animation;
 }
 
 

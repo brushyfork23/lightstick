@@ -33,7 +33,7 @@ FASTLED_USING_NAMESPACE
 
 // enumerate animation modes
 enum animation_t {
-  A_PULSE=0,
+  A_PULSE=1,
   A_STABLE,
   A_SOLID,
   A_RAINBOW,
