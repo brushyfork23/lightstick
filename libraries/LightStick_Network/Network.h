@@ -29,6 +29,13 @@
 
 #define N_NODES				3
 
+// pin definitions common to Moteuinos
+#define LED		9 // Moteinos have LED on D9
+#define FLASH_SS	8 // and FLASH SS on D8
+#define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
+
+
+
 // system state messages
 enum systemState {
 	M_CALIBRATE=0,	// calibration of sensors
@@ -47,59 +54,39 @@ enum controlInstructions {
 	M_LOWER_FREQ,	// Lower trigger frequency band
 
 	N_INSTRUCTIONS
-}
-
-// pin definitions common to Moteuinos
-#define LED		9 // Moteinos have LED on D9
-#define FLASH_SS	8 // and FLASH SS on D8
-#define FLASH_ID	0xEF30 // EF30 for windbond 4mbit flash
+};
 
 class Network {
   public:
-
+	// initialize radio
+	void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
+	// check for radio traffic; return true if we have a message or state change
+	boolean update();
+	// show the contents of the network information
+	void showNetwork();
+	// translate message -> instructions
+	void decodeMessage();
+	// translate instructions -> message
+	void encodeMessage();
+	// send message to all nodes
+	void broadcastMessage();
+	// send message to one node
+	void sendMessage(byte toNodeID);
+	void sendState(byte toNodeID=BROADCAST);
+	systemState state; // system state
+	// return my node ID
+	byte myNodeID;
+	byte senderNodeID, targetNodeID; // from and to information for message
   	// Payload
 	word 
 		animation,
 		volume,
 		input,
-		s=0;
-
-	// initialize radio
-	void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
-	// return my node ID
-	byte myNodeID;
-	// return my index into arrays
-	byte myIndex;
-	// which can be used to understand what is to the right and left
-	byte right(byte i);
-	byte left(byte i);
-
-	// check for radio traffic; return true if we have a message or state change
-	boolean update();
-	byte senderNodeID, targetNodeID; // from and to information for message
-	unsigned long message; // message 
-	systemState state; // system state
-	
-	// show the contents of the network information
-	void showNetwork();
-
-	// translate message -> instructions
-	void decodeMessage();
-
-	// translate instructions -> message
-	void encodeMessage();
-
-	// send message to all nodes
-	void broadcastMessage();
-
-	// send message to one node
-	void sendMessage(byte toNodeID);
-
-	void sendState(byte toNodeID=BROADCAST);
-
+		s;
+  private:
 	// all of this is conducted over radio
 	RFM69 radio;
-	
+	unsigned long message; // message
 };
 
 extern Network N;

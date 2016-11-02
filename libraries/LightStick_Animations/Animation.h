@@ -1,5 +1,5 @@
-#ifndef Animations_h
-#define Animations_h
+#ifndef Animation_h
+#define Animation_h
 
 #include <Arduino.h>
 

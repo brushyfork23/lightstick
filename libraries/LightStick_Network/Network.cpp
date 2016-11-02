@@ -30,42 +30,15 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	
 	this->animation = this->volume = this->input = this->s = 0;
 	
-	// get my index
-	this->myIndex = this->myNodeID % 10;
-	
 	// LED usage
 	pinMode(LED, OUTPUT);
 	digitalWrite(LED, LOW);
 
 	this->state = M_NORMAL; // default to normal operation
 	
-	Serial << F("Network. startup complete with myNodeID=") << this->myNodeID << F(" myIndex=") << this->myIndex << endl;
+	Serial << F("Network. startup complete with myNodeID=") << this->myNodeID << endl;
 	
 }
-
-
-// to my left is my index +1
-byte Network::left(byte i) {
-	return(
-		i % 10 == 2 ? i-2 : i+1
-	);	
-}
-
-// to my right is my index -1
-byte Network::right(byte i) {
-	return(
-		i % 10 == 0 ? i+2 : i-1
-	);	
-	
-	// get the tens digit
-	byte tens = i - (i % 10); 
-	// get the ones digit
-	byte ones = i % 10;
-	
-	Serial << "left " << tens << "\t" << ones << "\t" << (tens + ones>0 ? ones-1 : 2) << endl;
-	return( tens + ones>0 ? ones-1 : 2 );
-}
-
 
 boolean Network::update() {
 

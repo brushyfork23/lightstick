@@ -128,7 +128,7 @@ void setup() {
 }
 
 
-void handleControllerMessage(anim, input) {
+void handleControllerMessage(word anim, word input) {
   // Controller node sends animation instructions; transition to new anim
   switch (anim) {
     case A_CENTERFIRE:

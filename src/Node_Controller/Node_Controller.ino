@@ -56,7 +56,7 @@ void audioUpdate() {
     Serial << F("Reading new value: ") << inVal << endl;
     switch(inVal) {
       case 0:
-        controller->transitionTo(light);
+        controller.transitionTo(light);
         break;
       case kDropFreq:
         Serial << F("Instructing audio node to lower trigger frequency.") << endl;
@@ -96,7 +96,7 @@ void lightUpdate() {
     Serial << F("Reading new value: ") << inVal << endl;
     switch (inVal) {
       case 0:
-        controller->transitionTo(audio);
+        controller.transitionTo(audio);
         break;
       case 1:
         toggleHue(HUE_RED);
@@ -123,7 +123,7 @@ void lightUpdate() {
         toggleHue(HUE_PINK);
         break;
       case 9:
-        toggleRGB(CRGB.White);
+        toggleRGB(CRGB::White);
         break;
     }
 
@@ -140,22 +140,22 @@ void toggleHue(uint8_t hue) {
   if (lastAnim == A_HUE
     && lastColor == hue) {
     // This hue is being toggled off
-    N.anim = A_CLEAR;
+    N.animation = A_CLEAR;
     Serial << F("Clearing") << endl;
   } else {
-    N.anim = A_HUE;
-    N.color = hue;
+    N.animation = A_HUE;
+    N.input = hue;
   }
 }
-void toggleColor(uint8_t rgb) {
+void toggleRGB(uint8_t rgb) {
   if (lastAnim == A_RGB
     && lastColor == rgb) {
     // This color is being toggled off
-    N.anim = A_CLEAR;
+    N.animation = A_CLEAR;
     Serial << F("Clearing") << endl;
   } else {
-    N.anim = A_RGB;
-    N.color = rgb;
+    N.animation = A_RGB;
+    N.input = rgb;
   }
 }
 
