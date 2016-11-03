@@ -1,4 +1,4 @@
-#include "Animation.h"
+#include "LightStick_Animation.h"
 
 // see https://github.com/FastLED/FastLED/wiki
 
@@ -7,7 +7,7 @@ FASTLED_USING_NAMESPACE
 CRGB leds[NUM_LEDS];
 
 // startup
-void Animation::begin() {
+void LightStick_Animation::begin() {
   // tell FastLED about the LED strip configuration
   FastLED.addLeds<APA102, PIN_DATA1, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
   FastLED.addLeds<APA102, PIN_DATA2, PIN_CLK>(leds, NUM_LEDS).setCorrection(TypicalSMD5050);
@@ -30,27 +30,27 @@ void Animation::begin() {
   Serial << F("Animation. Startup complete.") << endl;
 }
 // sets FPS
-void Animation::setFPS(uint16_t framesPerSecond) {
+void LightStick_Animation::setFPS(uint16_t framesPerSecond) {
   this->pushNextFrame.interval(1000UL/framesPerSecond);
   Serial << F("FPS= ") << framesPerSecond << F(". show update=") << 1000UL/framesPerSecond << F(" ms.") << endl;
 }
 
 // sets master brightness
-void Animation::brightnessSet(byte brightness) {
+void LightStick_Animation::brightnessSet(byte brightness) {
   // set master brightness control
   this->brightVal = brightness;
   FastLED.setBrightness(brightness); 
   Serial << F("Brightness set= ") << brightness << endl;
 }
-void Animation::brightnessInc(uint8_t inc) {
+void LightStick_Animation::brightnessInc(uint8_t inc) {
   this->brightInc = inc;
   Serial << F("Brightness increment=") << this->brightInc << endl;
 }
-void Animation::brightnessTarget(byte brightness) {
+void LightStick_Animation::brightnessTarget(byte brightness) {
   this->targetBright = brightness;
   Serial << F("Brightness target=") << this->targetBright << endl;
 }
-void Animation::brightnessStep() {
+void LightStick_Animation::brightnessStep() {
   // Bring brightVal closer to targetBright
   if (this->brightVal != this->targetBright) {
     // set to target if increment would overshoot
@@ -65,26 +65,26 @@ void Animation::brightnessStep() {
 }
 
 // sets the animation 
-void Animation::startAnimation(byte animation, boolean clearStrip) {
+void LightStick_Animation::startAnimation(byte animation, boolean clearStrip) {
   this->anim = animation % (N_ANIMATIONS-1);
   if( clearStrip ) FastLED.clear();
 
   Serial << F("animation=") << this->anim << endl;
 
 }
-void Animation::colorSet(byte color) {
+void LightStick_Animation::colorSet(byte color) {
   this->colorVal = color;
   Serial << F("color set=") << this->colorVal << endl;
 }
-void Animation::colorIncrement(int inc) {
+void LightStick_Animation::colorIncrement(int inc) {
   this->colorInc = inc;
   Serial << F("color increment=") << this->colorInc << endl;
 }
-void Animation::colorTarget(byte color) {
+void LightStick_Animation::colorTarget(byte color) {
   this->targetColor = color;
   Serial << F("color target=") << this->targetColor << endl;
 }
-void Animation::colorStep() {
+void LightStick_Animation::colorStep() {
   // Bring colorVal closer to targetcolor
   if (this->colorVal != this->targetColor) {
     // set to target if increment would overshoot
@@ -97,19 +97,19 @@ void Animation::colorStep() {
     }
   }
 }
-void Animation::startPosition(byte pos) {
+void LightStick_Animation::startPosition(byte pos) {
   this->posVal = pos % NUM_LEDS;
   Serial << F("pos=") << this->posVal << endl;
 }
-void Animation::incrementPosition(int inc) {
+void LightStick_Animation::incrementPosition(int inc) {
   this->posInc = inc ;
   Serial << F("increment=") << this->posInc << endl;
 }
-void Animation::startSeed(uint16_t seed) {
+void LightStick_Animation::startSeed(uint16_t seed) {
   random16_set_seed( seed );  // FastLED/lib8tion
   Serial << F("random seed=") << seed << endl;
 }
-void Animation::setActivity(fract8 chance) {
+void LightStick_Animation::setActivity(fract8 chance) {
   if( chanceAct != chance ) {
     this->chanceAct = chance;
     Serial << F("activity chance=") << this->chanceAct << endl;
@@ -117,7 +117,7 @@ void Animation::setActivity(fract8 chance) {
 }
 
 // runs the animation
-void Animation::update() {
+void LightStick_Animation::update() {
 
   // pre-calculate the next frame
   static boolean nextFrameReady = false;
@@ -188,7 +188,7 @@ void Animation::update() {
 }
 
 // uses: colorVal, targetColor, colorInc, brightVal, targetBright, brightInc
-void Animation::aPulse() {
+void LightStick_Animation::aPulse() {
   if (this->brightVal == BRIGHT_LOW) {
     brightnessTarget(BRIGHT_HIGH);
   } else if (this->brightVal == BRIGHT_HIGH) {
@@ -203,7 +203,7 @@ void Animation::aPulse() {
 }
 
 // uses: colorVal
-void Animation::aStable() {
+void LightStick_Animation::aStable() {
   //colorStep();
   // FastLED's built-in solid fill (colorutils.h)
   brightnessSet(this->brightVal);
@@ -213,21 +213,21 @@ void Animation::aStable() {
 }
 
 // uses: colorVal, colorInc
-void Animation::aSolid() {
+void LightStick_Animation::aSolid() {
   // FastLED's built-in solid fill (colorutils.h)
   fill_solid( leds, NUM_LEDS, CHSV(colorVal, 255, 255) );
   colorVal += colorInc;
 }
 
 // uses: colorVal, colorInc
-void Animation::aRainbow() {
+void LightStick_Animation::aRainbow() {
   // FastLED's built-in rainbow generator (colorutils.h)
   fill_rainbow( leds, NUM_LEDS, colorVal );
   colorVal += colorInc;
 }
 
 // uses: colorVal, colorInc, posVal, chanceAct
-void Animation::aGlitter() {
+void LightStick_Animation::aGlitter() {
   if( random8() < chanceAct ) {
     posVal += random8(NUM_LEDS);
     posVal %= NUM_LEDS;
@@ -240,7 +240,7 @@ void Animation::aGlitter() {
 }
 
 // uses: colorVal, colorInc
-void Animation::aConfetti() {
+void LightStick_Animation::aConfetti() {
   // random colored speckles that blink in and fade smoothly
   fadeToBlackBy( leds, NUM_LEDS, 10 );
 
@@ -251,7 +251,7 @@ void Animation::aConfetti() {
 }
 
 // uses: colorVal, colorInc, posInc
-void Animation::aCylon()
+void LightStick_Animation::aCylon()
 {
   // a colored dot sweeping back and forth, with fading trails
   fadeToBlackBy( leds, NUM_LEDS, abs(2*posInc) );
@@ -264,7 +264,7 @@ void Animation::aCylon()
 }
 
 // uses: colorVal, colorInc
-void Animation::aBPM() {
+void LightStick_Animation::aBPM() {
   // colored stripes pulsing at a defined Beats-Per-Minute (BPM)
   const uint8_t BeatsPerMinute = 120;
   const CRGBPalette16 palette = PartyColors_p;
@@ -279,7 +279,7 @@ void Animation::aBPM() {
 }
 
 // uses: colorVal
-void Animation::aJuggle() {
+void LightStick_Animation::aJuggle() {
   // eight colored dots, weaving in and out of sync with each other
   fadeToBlackBy( leds, NUM_LEDS, 20);
 
@@ -293,14 +293,14 @@ void Animation::aJuggle() {
 }
 
 // uses: colorVal (as brightness), colorInc
-void Animation::aWhite() {
+void LightStick_Animation::aWhite() {
   // FastLED's built-in solid fill (colorutils.h)
   fill_solid( leds, NUM_LEDS, CHSV(0, 0, colorVal) );
   colorVal += colorInc;
 }
 
 // uses: colorVal, colorInc
-void Animation::aFire() {
+void LightStick_Animation::aFire() {
   
   const CRGBPalette16 gPal = HeatColors_p;
   const bool gReverseDirection = false;
@@ -357,7 +357,7 @@ void Animation::aFire() {
 
 }
 
-void Animation::aCenterFire(byte center, byte extent) {
+void LightStick_Animation::aCenterFire(byte center, byte extent) {
 
   const CRGBPalette16 gPal = HeatColors_p;
   const bool gReverseDirection = false;
@@ -415,7 +415,7 @@ void Animation::aCenterFire(byte center, byte extent) {
 }
 
 // uses: posVal, posInc, colorVal
-void Animation::aTestPattern() {
+void LightStick_Animation::aTestPattern() {
   // zap the strips
   FastLED.clear();
 
@@ -435,21 +435,21 @@ void Animation::aTestPattern() {
   leds[posVal] = CHSV( colorVal, 255, 255 );
 }
 
-void Animation::aClear() {
+void LightStick_Animation::aClear() {
   FastLED.clear();
   fill_solid( leds, NUM_LEDS, CRGB::Black );
 }
 
 // uses: colorVal
-void Animation::aRGB() {
+void LightStick_Animation::aRGB() {
   brightnessSet(this->brightVal);
   fill_solid( leds, NUM_LEDS, this->targetColor );
 }
 
 // uses: colorVal
-void Animation::aHue() {
+void LightStick_Animation::aHue() {
   brightnessSet(this->brightVal);
   fill_solid( leds, NUM_LEDS, CHSV(this->targetColor, 255, 255) );
 }
 
-Animation A;
+LightStick_Animation A;

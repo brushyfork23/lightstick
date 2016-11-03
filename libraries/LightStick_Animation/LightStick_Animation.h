@@ -1,5 +1,5 @@
-#ifndef Animation_h
-#define Animation_h
+#ifndef LightStick_Animation_h
+#define LightStick_Animation_h
 
 #include <Arduino.h>
 
@@ -65,7 +65,7 @@ purple
 pink
 */
 
-class Animation {
+class LightStick_Animation {
   public:
     // initialize led strips
     void begin();
@@ -128,6 +128,6 @@ class Animation {
     void aHue();
 };
 
-extern Animation A;
+extern LightStick_Animation A;
 
 #endif

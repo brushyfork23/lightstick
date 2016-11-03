@@ -1,8 +1,8 @@
-#include "Network.h"
+#include "LightStick_Network.h"
 
 SPIFlash flash(FLASH_SS, FLASH_ID); 
 
-void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
+void LightStick_Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	Serial << F("Network. startup.") << endl;
 
 	// Establish NodeID in EEPROM
@@ -40,7 +40,7 @@ void Network::begin(byte nodeID, byte groupID, byte freq, byte powerLevel) {
 	
 }
 
-boolean Network::update() {
+boolean LightStick_Network::update() {
 
 	// new traffic?
 	if( radio.receiveDone() ) {  
@@ -101,7 +101,7 @@ boolean Network::update() {
 	return( false );
 }
 
-void Network::showNetwork() {
+void LightStick_Network::showNetwork() {
 	Serial << F("Network. ");
 	Serial << senderNodeID << F("->") << targetNodeID;
 	Serial << F("\ts=")  << s;
@@ -120,14 +120,14 @@ message is 32 bits:
 message == AAAAAAAAVVVVVVVVIIIIIIIISSSSSSSS
 */
 
-void Network::decodeMessage() {
+void LightStick_Network::decodeMessage() {
 	this->s = this->message & 255UL;
 	this->input = (this->message >> 8) & 255UL;
 	this->volume = (this->message >> 16) & 255UL;
 	this->animation = (this->message >> 24) & 255UL;
 }
 
-void Network::encodeMessage() {
+void LightStick_Network::encodeMessage() {
 
 	this->message = 0;
 	
@@ -145,7 +145,7 @@ void Network::encodeMessage() {
 }
 
 // broadcast message to all nodes
-void Network::broadcastMessage() {
+void LightStick_Network::broadcastMessage() {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
 
@@ -156,7 +156,7 @@ void Network::broadcastMessage() {
 
 }
 
-void Network::sendMessage(byte toNodeID) {
+void LightStick_Network::sendMessage(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
 
@@ -167,7 +167,7 @@ void Network::sendMessage(byte toNodeID) {
 
 }
 
-void Network::sendState(byte toNodeID) {
+void LightStick_Network::sendState(byte toNodeID) {
 	// put check in to make sure we're not clobbering messages from other transceivers
 	update();
 
@@ -177,4 +177,4 @@ void Network::sendState(byte toNodeID) {
 	radio.send(toNodeID, (const void*)(&state), sizeof(state));
 }
 
-Network N;
+LightStick_Network N;

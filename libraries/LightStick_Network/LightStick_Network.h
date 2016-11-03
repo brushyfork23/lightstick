@@ -1,5 +1,5 @@
-#ifndef Network_h
-#define Network_h
+#ifndef LightStick_Network_h
+#define LightStick_Network_h
 
 #include <Arduino.h>
 
@@ -56,7 +56,7 @@ enum controlInstructions {
 	N_INSTRUCTIONS
 };
 
-class Network {
+class LightStick_Network {
   public:
 	// initialize radio
 	void begin(byte nodeID=255, byte groupID=GROUPID, byte freq=RF69_915MHZ, byte powerLevel=POWERLEVEL);
@@ -83,12 +83,12 @@ class Network {
 		volume,
 		input,
 		s;
-  private:
 	// all of this is conducted over radio
 	RFM69 radio;
+  private:
 	unsigned long message; // message
 };
 
-extern Network N;
+extern LightStick_Network N;
 
 #endif

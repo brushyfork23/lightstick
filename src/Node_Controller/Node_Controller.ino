@@ -10,8 +10,8 @@
 
 #include <FiniteStateMachine.h>
 
-#include <Network.h>
-#include <Animation.h>
+#include <LightStick_Network.h>
+#include <LightStick_Animation.h>
 
 #define INSTRUCTIONS "Commands: 1=Drop Freq, 2=Raise Freq, 3=Drop Vol, 4=Raise Vol"
 #define COLOR_INSTRUCTIONS "Colors: 1=Red, 2=Orange, 3=Yellow, 4=Green, 5=Aqua, 6=Blue, 7=Purple, 8=Pink, 9=White"

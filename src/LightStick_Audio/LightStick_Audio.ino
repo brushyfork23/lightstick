@@ -11,8 +11,8 @@
 #include <FastLED.h>
 #include <FiniteStateMachine.h>
 
-#include <Network.h>
-#include <Animation.h>
+#include <LightStick_Network.h>
+#include <LightStick_Animation.h>
 
 uint8_t curAnim = A_CLEAR;
 

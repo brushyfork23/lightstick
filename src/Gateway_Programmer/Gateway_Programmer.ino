@@ -44,7 +44,7 @@
 #include <Streaming.h>
 #include <Metro.h>
 #include <EEPROM.h>
-#include <Network.h>
+#include <LightStick_Network.h>
 
 #define ACK_TIME    100  // # of ms to wait for an ack
 #define TIMEOUT     3000
@@ -61,7 +61,6 @@ systemState messageReboot = M_REBOOT;
 
 // sniffing and spoofing
 boolean sniff = false;
-boolean distance = false;
 
 void setup() {
   Serial.begin(115200);
@@ -111,9 +110,6 @@ void loop() {
   } else if (inputLen == 2 && input[0] == 'S' && input[1] == 'N') {
     sniff = ! sniff;
     Serial << F("Sniffing: ") << sniff << endl;
-  } else if (inputLen == 2 && input[0] == 'D' && input[1] == 'I') {
-    distance = ! distance;
-    Serial << F("Distance: ") << distance << endl;
   } else if (inputLen == 2 && input[0] == 'C' && input[1] == 'A') {
     sendMessage(messageCalibrate);   
     Serial << F("[CA]libration operation Message") << endl;
@@ -144,10 +140,6 @@ void loop() {
     N.decodeMessage();
     
     if( sniff ) N.showNetwork();
-    
-    if( distance ) {
-      Serial << F("Distance:\td0=") << N.distance[0] << F("\td1=") << N.distance[1] << F("\td2=") << N.distance[2] << endl;
-    }
     
     static unsigned long cycleTime = 50UL;
     

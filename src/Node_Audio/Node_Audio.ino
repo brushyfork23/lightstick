@@ -9,7 +9,7 @@
 #include <WirelessHEX69.h>
 #include <EEPROM.h>
 
-#include <Network.h>
+#include <LightStick_Network.h>
 
 //------ Input units.
 #include "Mic.h" // Microphone
