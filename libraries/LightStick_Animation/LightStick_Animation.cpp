@@ -171,6 +171,8 @@ void LightStick_Animation::update() {
     case A_HUE: 
       aHue(); 
       break;
+    case A_DRAGONTEARS:
+      aDragonTears();
     default: 
       break;
     }
@@ -297,6 +299,113 @@ void LightStick_Animation::aWhite() {
   // FastLED's built-in solid fill (colorutils.h)
   fill_solid( leds, NUM_LEDS, CHSV(0, 0, colorVal) );
   colorVal += colorInc;
+}
+
+void LightStick_Animation::aDragonTears() {
+  const bool terminates = false; // Should the flame ever reach the top and extinguish, restarting the animation?
+  const int framesPerFlameRise = 10; // Number of frames elapsed before flame rises one pixel.
+                                   // TODO: accept a totalRunTime val in startAnimation() and generate this dynamically.
+  const int framesPerTearFall = 1; // Number of frames elapsed before tear falls one pixel.
+  const int MAX_TEARS = 20;
+  const int flameChance = 20;
+  const CRGBPalette16 flamePal = HeatColors_p;
+  const CRGB tearColor = CRGB::Blue; // TODO: use pallet for blues
+  const uint8_t flashHue = HUE_YELLOW;
+  const int flashHeight = 30;  // how high the flash will climb
+  const byte flame = 1;
+  const byte tear = 2;
+
+  // Flame rises from start to top at a constant rate.
+  // Tears are generated 1 pixel below flame at a rate modeled by a cubic wave which accepts flame height as theta
+  // Tears fall quickly to the bottom.
+  // When a tear reaches the bottom it is replaced with a flash (gradient several pixels high)
+
+
+
+
+// -- start --
+  //flash in new flame
+  static uint8_t flameHeight = flashHeight; // ensure flash is never higher than flame
+  // settle flame.
+
+
+  // -- main --
+  static int tears[MAX_TEARS];  // tears, in order from highest to lowest.
+  static int tearCnt = 0;       // counter for number of visible tears.
+                                // when each tear reaches the bottom, the count
+                                // is decremented, causing an iteration over tears
+                                // to no longer read it.
+  bool flash = false;
+
+  // raise flame height
+  if (random8() < flameChance) {
+    flameHeight++;
+  }
+
+  //flicker around flame
+  /*flickerAt(leds, flameHeight);
+        // Step 1.  Cool down every cell a little
+        for( int i = 0; i < NUM_LEDS; i++) {
+          heat[i] = qsub8( heat[i],  random8(0, ((COOLING * 10) / NUM_LEDS) + 2));
+        }
+
+        // Step 2.  Heat from each cell drifts 'up' and diffuses a little
+        for( int k= NUM_LEDS - 1; k >= 2; k--) {
+          heat[k] = (heat[k - 1] + heat[k - 2] + heat[k - 2] ) / 3;
+        }
+
+        // Step 3.  Randomly ignite new 'sparks' of heat near the bottom
+        if( random8() < chanceAct ) {
+          int y = random8(7);
+          heat[y] = qadd8( heat[y], random8(160,255) );
+        }
+        */
+
+  // drop each tear; trigger new flash
+  for(int i=0;i<tearCnt;i++){
+    if (tears[i] > 0) {
+      // drop tear by 1
+      if (--tears[i] == 0 ) {
+        // trigger flash when tear reaches 0
+        flash = true;
+        // remove tear
+        tearCnt--;
+      }
+    }
+  }
+
+  // spawn new tears
+  // chance of tears is based on cubic wave which accepts flame height as theta
+  if (tearCnt < MAX_TEARS
+    && random8() <= cubicwave8(map(flameHeight, flashHeight, NUM_LEDS, 0, 255))
+  ) {
+    memcpy(&tears[0], &tears[1], tearCnt-1);
+    tears[0] = flameHeight - 1;
+    tearCnt++;
+  }
+
+  // clear below flame height (to remove previous flash and tears)
+  fill_solid(leds, flameHeight-1, CRGB::Black);
+
+  // draw flame
+  leds[flameHeight] = CRGB::Red;
+
+  // draw tears
+  for(int i=0;i<tearCnt;i++) {
+    leds[tears[i]] = tearColor;
+  }
+
+  // show flash
+  if (flash) {
+    flash = false;
+    fill_gradient(leds, 0, CHSV(flashHue, 255, 255), flashHeight, CHSV(flashHue, 255, 0));
+  }
+
+
+  // -- outro --
+  // drop few tears
+  // fade flame to blue
+  // drop couple tears, fading flame each time until flame 0
 }
 
 // uses: colorVal, colorInc

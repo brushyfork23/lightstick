@@ -49,6 +49,7 @@ enum animation_t {
   A_CLEAR,
   A_RGB,
   A_HUE,
+  A_DRAGONTEARS,
   
   N_ANIMATIONS
 };
@@ -126,6 +127,7 @@ class LightStick_Animation {
     void aClear();
     void aRGB();
     void aHue();
+    void aDragonTears();
 };
 
 extern LightStick_Animation A;
