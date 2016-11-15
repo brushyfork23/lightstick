@@ -132,8 +132,14 @@ void handleControllerMessage(word anim, word input) {
   // Controller node sends animation instructions; transition to new anim
   switch (anim) {
     case A_CENTERFIRE:
-      if (curAnim != A_CENTERFIRE) {
-        A.startAnimation(A_CENTERFIRE, true);
+      if (curAnim != anim) {
+        A.startAnimation(anim, true);
+        A.brightnessSet(255);
+      }
+      break;
+    case A_DRAGONTEARS:
+      if (curAnim != anim) {
+        A.startAnimation(anim, true);
         A.brightnessSet(255);
       }
       break;

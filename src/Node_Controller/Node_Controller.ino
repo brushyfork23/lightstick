@@ -13,8 +13,6 @@
 #include <LightStick_Network.h>
 #include <LightStick_Animation.h>
 
-#define INSTRUCTIONS "Commands: 1=Drop Freq, 2=Raise Freq, 3=Drop Vol, 4=Raise Vol"
-#define COLOR_INSTRUCTIONS "Colors: 1=Red, 2=Orange, 3=Yellow, 4=Green, 5=Aqua, 6=Blue, 7=Purple, 8=Pink, 9=White"
 enum
 {
   // Commands
@@ -32,18 +30,20 @@ boolean waitingForColor = false;
 
 // Controller sends commands to either Audio node or LightStick nodes.
 // Audio node receives instructions on tuning volume and frequency level.
-// LightStick nodes receive instructions of which animation to display.
-// light <--> audio
+// LightStick nodes receive instructions of which color or animation to display
 
 /* Prototypes for state methods */
 void audioEnter(), audioUpdate(), audioExit();
-void lightEnter(), lightUpdate(), lightExit();
+void colorEnter(), colorUpdate(), colorExit();
+void animEnter(), animUpdate(), animExit();
 
 State audio = State(audioEnter, audioUpdate, audioExit);
 
-State light = State(lightEnter, lightUpdate, lightExit);
+State color = State(colorEnter, colorUpdate, colorExit);
 
-FSM controller = FSM(light); //initialize state machine, start in state: light
+State anim = State(animEnter, animUpdate, animExit);
+
+FSM controller = FSM(anim); //initialize state machine, start in state: anim
 
 //***** Audio Commands
 void audioEnter() {
@@ -56,7 +56,7 @@ void audioUpdate() {
     Serial << F("Reading new value: ") << inVal << endl;
     switch(inVal) {
       case 0:
-        controller.transitionTo(light);
+        controller.transitionTo(color);
         break;
       case kDropFreq:
         Serial << F("Instructing audio node to lower trigger frequency.") << endl;
@@ -85,18 +85,18 @@ void audioUpdate() {
 void audioExit() {
 }
 
-//***** LightStick Commands
-void lightEnter() {
-  Serial << F("LightStick: ->light") << endl;
+//***** Color Commands
+void colorEnter() {
+  Serial << F("LightStick: ->color") << endl;
   printColors();
 }
-void lightUpdate() {
+void colorUpdate() {
   if( Serial.available() > 0 ) {
     inVal = Serial.parseInt();
     Serial << F("Reading new value: ") << inVal << endl;
     switch (inVal) {
       case 0:
-        controller.transitionTo(audio);
+        controller.transitionTo(anim);
         break;
       case 1:
         toggleHue(HUE_RED);
@@ -133,7 +133,52 @@ void lightUpdate() {
     printColors();
   }
 }
-void lightExit() {
+void colorExit() {
+}
+
+//***** Animation Commands
+void animEnter() {
+  Serial << F("LightStick: ->anim") << endl;
+  printAnimations();
+}
+void animUpdate() {
+  if( Serial.available() > 0 ) {
+    inVal = Serial.parseInt();
+    Serial << F("Reading new value: ") << inVal << endl;
+    switch (inVal) {
+      case 0:
+        controller.transitionTo(audio);
+        break;
+      case 1:
+        toggleAnim(A_CENTERFIRE);
+        break;
+      case 2:
+        toggleAnim(A_DRAGONTEARS);
+        break;
+      case 3:
+        toggleAnim(A_GLITTER);
+        break;
+      case 4:
+        toggleAnim(A_CONFETTI);
+        break;
+      case 5:
+        toggleAnim(A_CYLON);
+        break;
+      case 6:
+        toggleAnim(A_JUGGLE);
+        break;
+      case 7:
+        toggleAnim(A_FIRE);
+        break;
+    }
+
+    N.encodeMessage();
+    N.broadcastMessage();
+
+    printAnimations();
+  }
+}
+void animExit() {
 }
 
 void toggleHue(uint8_t hue) {
@@ -158,6 +203,15 @@ void toggleRGB(uint8_t rgb) {
     N.input = rgb;
   }
 }
+void toggleAnim(uint8_t anim) {
+  if (lastAnim == anim) {
+    // This hue is being toggled off
+    N.animation = A_CLEAR;
+    Serial << F("Clearing") << endl;
+  } else {
+    N.animation = anim;
+  }
+}
 
 void setup() {
   delay(500);
@@ -179,8 +233,11 @@ void loop() {
 }
 
 void printInstructions() {
-  Serial << F(INSTRUCTIONS) << endl;
+  Serial << F("Commands: 1=Drop Freq, 2=Raise Freq, 3=Drop Vol, 4=Raise Vol") << endl;
 }
 void printColors() {
-  Serial << F(COLOR_INSTRUCTIONS) << endl;
+  Serial << F("Colors: 1=Red, 2=Orange, 3=Yellow, 4=Green, 5=Aqua, 6=Blue, 7=Purple, 8=Pink, 9=White") << endl;
+}
+void printAnimations() {
+  Serial << F("Animations: 1=CenterFire, 2=DragonTears, 3=Glitter, 4=Confetti, 5=Cylon, 6=Juggle, 7=Fire") << endl;
 }
